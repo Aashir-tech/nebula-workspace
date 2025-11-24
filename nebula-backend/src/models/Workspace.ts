@@ -16,7 +16,7 @@ const WorkspaceSchema = new Schema<IWorkspace>(
       required: [true, 'Workspace type is required']
     },
     ownerId : { 
-      type: Schema.Types.ObjectId, 
+      type: Schema.Types.ObjectId as any, 
       ref: 'User',
       required: [true, 'Owner is required']
     },

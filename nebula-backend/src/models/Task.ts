@@ -27,7 +27,7 @@ const BlockSchema = new Schema<Block>(
 const TaskSchema = new Schema<ITask>(
   {
     workspaceId: { 
-      type: Schema.Types.ObjectId, 
+      type: Schema.Types.ObjectId as any, 
       ref: 'Workspace',
       required: [true, 'Workspace is required']
     },
@@ -52,7 +52,7 @@ const TaskSchema = new Schema<ITask>(
       maxlength: [30, 'Tag cannot exceed 30 characters']
     }],
     assigneeId: { 
-      type: Schema.Types.ObjectId, 
+      type: Schema.Types.ObjectId as any, 
       ref: 'User',
       default: null
     },
