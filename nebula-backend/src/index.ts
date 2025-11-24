@@ -23,7 +23,6 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://nebula-workspace.vercel.app',
   'https://nebula-workspace.vercel.app/',
-
   'https://nebula-workspace-backend.vercel.app',
   process.env.FRONTEND_URL
 ].filter((origin): origin is string => Boolean(origin));
@@ -33,7 +32,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true
   }
 });
@@ -41,18 +40,25 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 8299;
 
 // Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+
 app.use(cors({
   origin: (origin, callback) => {
+    const allowed = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://nebula-workspace.vercel.app',
+      'https://nebula-workspace-backend.vercel.app',
+      process.env.FRONTEND_URL
+    ];
+    
     // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    if (allowed.includes(origin) || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log('Blocked by CORS:', origin);
+      callback(null, false); // Don't throw error, just deny
     }
   },
   credentials: true,
@@ -161,6 +167,17 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// Export app for Vercel
+export default app;
+
+// Only start server if not running on Vercel
+if (process.env.NODE_ENV !== 'production') {
+  startServer();
+} else {
+  // Connect to DB for Vercel
+  connectDB().then(() => {
+    console.log('Connected to DB');
+  });
+}
 
 export { io };
