@@ -34,7 +34,7 @@ const Auth: React.FC = () => {
   const handleGoogleLogin = () => {
     // Redirect to backend Google OAuth endpoint
     const backendURL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:5000' 
+      ? 'http://localhost:8299' 
       : 'https://nebula-workspace-backend.vercel.app';
     window.location.href = `${backendURL}/api/auth/google`;
   };
