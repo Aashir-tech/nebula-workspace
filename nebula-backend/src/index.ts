@@ -22,6 +22,9 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://nebula-workspace.vercel.app',
+    'https://nebula-workspace.vercel.app/',
+
+  'https://nebula-workspace-backend.vercel.app',
   process.env.FRONTEND_URL
 ].filter((origin): origin is string => Boolean(origin));
 
