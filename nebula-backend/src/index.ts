@@ -5,7 +5,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import passport from 'passport';
 import { connectDB } from './config/db.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
@@ -46,7 +45,6 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(passport.initialize());
 
 // Health check
 app.get('/health', (req, res) => {
