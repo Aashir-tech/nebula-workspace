@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import Task from '../models/Task';
-import User from '../models/User';
-import { ApiError } from '../middleware/errorHandler';
+import Task from '../models/Task.js';
+import User from '../models/User.js';
+import { ApiError } from '../middleware/errorHandler.js';
 
 export const getLeaderboard = async (req: Request, res: Response) => {
   try {

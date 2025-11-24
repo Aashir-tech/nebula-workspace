@@ -18,58 +18,57 @@ import googleAuthRoutes from './routes/googleAuth.js';
 
 dotenv.config();
 
+const app = express();
+const httpServer = createServer(app);
+
+const PORT = process.env.PORT || 8299;
+
+// ============================================
+// CORS Configuration - FIXED
+// ============================================
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://nebula-workspace.vercel.app',
-  'https://nebula-workspace.vercel.app/',
-  'https://nebula-workspace-backend.vercel.app',
   process.env.FRONTEND_URL
-].filter((origin): origin is string => Boolean(origin));
+].filter(Boolean);
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true
-  }
-});
+app.use(cors({ origin: true, credentials: true }));
 
-const PORT = process.env.PORT || 8299;
+// Handle preflight requests
+app.options('*', cors({ origin: true, credentials: true }));
 
+// ============================================
 // Middleware
-
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://nebula-workspace.vercel.app',
-      'https://nebula-workspace-backend.vercel.app',
-      process.env.FRONTEND_URL
-    ];
-    
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    
-    if (allowed.includes(origin) || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(null, false); // Don't throw error, just deny
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+// ============================================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check
+// Ensure trailing slashes don't cause issues
+app.use((req, res, next) => {
+  if (req.path.includes('//')) {
+    const cleanPath = req.path.replace(/\/+/g, '/');
+    return res.redirect(301, cleanPath);
+  }
+  next();
+});
+
+// ============================================
+// Health Check
+// ============================================
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'Nebula Backend API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -78,7 +77,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ============================================
 // API Routes
+// ============================================
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', googleAuthRoutes);
 app.use('/api/tasks', taskRoutes);
@@ -86,27 +87,36 @@ app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 
-// Error handling
+// ============================================
+// Error Handling
+// ============================================
 app.use(notFound);
 app.use(errorHandler);
 
-// Socket.io for real-time collaboration
+// ============================================
+// Socket.IO Setup
+// ============================================
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins as string[],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true
+  }
+});
+
 io.on('connection', (socket) => {
   console.log('✅ Client connected:', socket.id);
 
-  // Join workspace room
   socket.on('join-workspace', (workspaceId: string) => {
     socket.join(`workspace-${workspaceId}`);
     console.log(`📁 Socket ${socket.id} joined workspace-${workspaceId}`);
   });
 
-  // Leave workspace room
   socket.on('leave-workspace', (workspaceId: string) => {
     socket.leave(`workspace-${workspaceId}`);
     console.log(`📁 Socket ${socket.id} left workspace-${workspaceId}`);
   });
 
-  // Broadcast block updates to workspace members
   socket.on('block-update', (data: { workspaceId: string; taskId: string; blocks: any[] }) => {
     socket.to(`workspace-${data.workspaceId}`).emit('block-updated', {
       taskId: data.taskId,
@@ -114,12 +124,10 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Broadcast task creation
   socket.on('task-created', (data: { workspaceId: string; task: any }) => {
     socket.to(`workspace-${data.workspaceId}`).emit('task-added', data.task);
   });
 
-  // Broadcast task deletion
   socket.on('task-deleted', (data: { workspaceId: string; taskId: string }) => {
     socket.to(`workspace-${data.workspaceId}`).emit('task-removed', data.taskId);
   });
@@ -129,10 +137,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server
+// ============================================
+// Start Server
+// ============================================
 const startServer = async () => {
   try {
-    // Connect to MongoDB
     await connectDB();
 
     httpServer.listen(PORT, () => {
@@ -159,6 +168,7 @@ const startServer = async () => {
       console.log(`   POST   /api/ai/enhance`);
       console.log(`   POST   /api/ai/insights`);
       console.log(`   POST   /api/ai/standup`);
+      console.log(`   GET    /api/leaderboard`);
       console.log('\n');
     });
   } catch (error) {
@@ -167,17 +177,19 @@ const startServer = async () => {
   }
 };
 
-// Export app for Vercel
+// ============================================
+// Export for Vercel
+// ============================================
 export default app;
 
-// Only start server if not running on Vercel
-if (process.env.NODE_ENV !== 'production') {
+// Connect to DB immediately for Vercel serverless
+if (process.env.VERCEL) {
+  connectDB().catch(err => console.error('DB connection error:', err));
+}
+
+// Only start server locally (not on Vercel)
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'production') {
   startServer();
-} else {
-  // Connect to DB for Vercel
-  connectDB().then(() => {
-    console.log('Connected to DB');
-  });
 }
 
 export { io };
