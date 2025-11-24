@@ -1,0 +1,7 @@
+{
+  "name": "Nebula Workspace",
+  "description": "A next-gen, AI-powered collaborative workspace with fluid UI, Kanban boards, and generative text features.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
