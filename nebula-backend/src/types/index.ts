@@ -102,13 +102,14 @@ export interface AuthResponse {
   };
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-      };
-    }
+export interface JWTPayload {
+  id: string;
+  email: string;
+}
+
+// Extend Express Request to add our JWT user
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: JWTPayload;
   }
 }
