@@ -15,6 +15,7 @@ import workspaceRoutes from './routes/workspaces.js';
 import aiRoutes from './routes/ai.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import googleAuthRoutes from './routes/googleAuth.js';
+import invitationRoutes from './routes/invitations.js';
 
 dotenv.config();
 
@@ -86,6 +87,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/invitations', invitationRoutes);
 
 // ============================================
 // Error Handling

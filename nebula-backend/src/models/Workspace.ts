@@ -24,7 +24,23 @@ const WorkspaceSchema = new Schema<IWorkspace>(
       type: String, 
       unique: true,
       default: () => nanoid(10) // Generates unique 10-char code
-    }
+    },
+    members: [{
+      userId: { 
+        type: Schema.Types.ObjectId, 
+        ref: 'User',
+        required: true 
+      },
+      role: { 
+        type: String, 
+        enum: ['OWNER', 'ADMIN', 'MEMBER'],
+        default: 'MEMBER'
+      },
+      joinedAt: { 
+        type: Date, 
+        default: Date.now 
+      }
+    }]
   },
   { timestamps: true }
 );

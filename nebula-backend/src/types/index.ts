@@ -28,7 +28,7 @@ export interface IUser {
   lastTaskDate: Date | null;
   workspaces: {
     workspaceId: string;
-    role: 'OWNER' | 'MEMBER';
+    role: 'OWNER' | 'ADMIN' | 'MEMBER';
   }[];
   createdAt: Date;
   updatedAt: Date;
@@ -40,6 +40,11 @@ export interface IWorkspace {
   type: WorkspaceType;
   ownerId: string;
   inviteCode: string;
+  members?: {
+    userId: any;
+    role: 'OWNER' | 'ADMIN' | 'MEMBER';
+    joinedAt: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +58,7 @@ export interface ITask {
   tags: string[];
   assigneeId?: string;
   aiEnhanced: boolean;
+  dueDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +80,7 @@ export interface CreateTaskRequest {
   title: string;
   contentBlocks?: Block[];
   tags?: string[];
+  dueDate?: Date;
 }
 
 export interface UpdateTaskRequest {
@@ -82,6 +89,7 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   tags?: string[];
   aiEnhanced?: boolean;
+  dueDate?: Date;
 }
 
 export interface AIEnhanceRequest {

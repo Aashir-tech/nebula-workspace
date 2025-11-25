@@ -13,7 +13,7 @@ const AppContent: React.FC = () => {
     
     if (token) {
       // Store token and redirect
-      localStorage.setItem('token', token);
+      localStorage.setItem('nebula_token', token);
       setToken(token);
       // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);

@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Workspace from '../models/Workspace.js';
+import { generateToken } from '../middleware/auth.js';
+import { WorkspaceType } from '../types/index.js';
 
 const router = Router();
 
@@ -78,6 +80,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     let user = await User.findOne({ email: googleUser.email });
 
     if (!user) {
+      // Create new user
       user = await User.create({
         name: googleUser.name || googleUser.email.split('@')[0],
         email: googleUser.email,
@@ -85,15 +88,31 @@ router.get('/google/callback', async (req: Request, res: Response) => {
         avatarUrl: googleUser.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(googleUser.name || 'User')}&background=6366f1&color=fff`,
         streak: 0,
         lastTaskDate: null,
+        workspaces: []
       });
+
+      // Create default personal workspace for new user
+      const personalWorkspace = new Workspace({
+        name: 'Personal',
+        type: WorkspaceType.PERSONAL,
+        ownerId: user._id
+      });
+
+      await personalWorkspace.save();
+
+      // Associate workspace with user
+      user.workspaces.push({
+        workspaceId: personalWorkspace._id.toString(),
+        role: 'OWNER'
+      });
+      await user.save();
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET || 'nebula-secret-key',
-      { expiresIn: '7d' }
-    );
+    // Generate JWT token with consistent payload structure
+    const token = generateToken({
+      id: user._id.toString(),
+      email: user.email
+    });
 
     // Redirect to frontend with token
     res.redirect(`${frontendURL}?token=${token}`);

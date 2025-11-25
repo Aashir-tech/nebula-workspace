@@ -1,49 +1,101 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ViewMode } from '../types';
-import { BoardView, ListView, GridView, OverviewView } from './Views';
+import { BoardView, ListView, GridView, OverviewView, InboxView, TodayView, FiltersView, CalendarView } from './Views';
 import Leaderboard from './Leaderboard';
 import Sidebar from './Sidebar';
 import CommandPalette from './CommandPalette';
 import { ProfileModal } from './Modals';
+import InviteModal from './InviteModal';
+import NotificationBar from './NotificationBar';
+import VoiceInput from './VoiceInput';
 import { 
-  Menu, Plus, Mic, MessageSquarePlus, Send, Search, 
-  Flame, Bell, Settings, LogOut 
+  Menu, Search, Flame, Bell, UserPlus, SlidersHorizontal, 
+  Layout, List, Grid, Trophy, Home, Sun, Moon, PanelLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const Dashboard: React.FC = () => {
   const { 
-    viewMode, currentWorkspace, user, 
-    addTask, isListening, toggleMic, transcript,
-    setShowCommandPalette 
+    viewMode, setViewMode, currentWorkspace, workspaces, user, 
+    addTask, invitations, createInvitation, acceptInvitation, rejectInvitation,
+    setShowCommandPalette,
+    showNotifications,
+    setShowNotifications,
+    loadWorkspaces
   } = useStore();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showChatInput, setShowChatInput] = useState(false);
-  const [chatMessage, setChatMessage] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showViewMenu, setShowViewMenu] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    // Check system preference or local storage
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    } else {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showInviteModal && workspaces.length === 0) {
+      loadWorkspaces();
+    }
+  }, [showInviteModal, workspaces.length]);
+
+  const toggleTheme = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+      setIsDarkMode(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+      setIsDarkMode(true);
+    }
+  };
 
   const renderView = () => {
     switch (viewMode) {
-      case ViewMode.HOME:
-        return <OverviewView />;
+      case ViewMode.HOME: return <OverviewView />;
       case ViewMode.OVERVIEW: return <OverviewView />;
       case ViewMode.BOARD: return <BoardView />;
       case ViewMode.LIST: return <ListView />;
       case ViewMode.GRID: return <GridView />;
       case ViewMode.LEADERBOARD: return <Leaderboard />;
+      case ViewMode.INBOX: return <InboxView />;
+      case ViewMode.TODAY: return <TodayView />;
+      case ViewMode.FILTERS: return <FiltersView />;
+      case ViewMode.CALENDAR: return <CalendarView />;
       default: return <OverviewView />;
     }
   };
 
+  const viewOptions = [
+    { mode: ViewMode.HOME, label: 'Home', icon: Home },
+    { mode: ViewMode.BOARD, label: 'Board', icon: Layout },
+    { mode: ViewMode.LIST, label: 'List', icon: List },
+    { mode: ViewMode.GRID, label: 'Gallery', icon: Grid },
+    { mode: ViewMode.LEADERBOARD, label: 'Leaderboard', icon: Trophy },
+  ];
+
   return (
-    <div className="flex h-screen bg-[#0f172a] text-slate-200 overflow-hidden font-sans selection:bg-indigo-500/30">
+    <div className="flex h-screen bg-white dark:bg-[#0f172a] text-slate-900 dark:text-slate-200 overflow-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-200">
       <CommandPalette />
       
       {/* Desktop Sidebar */}
-      <div className="hidden md:block h-full">
-          <Sidebar />
+      <div className="hidden md:block h-full border-r border-slate-200 dark:border-white/5">
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+          />
       </div>
 
       {/* Mobile Drawer */}
@@ -67,169 +119,131 @@ const Dashboard: React.FC = () => {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#0f172a] relative">
-        {/* Ambient Background - Nebula Effect */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
-
+      <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0f172a] relative transition-colors duration-200">
         {/* Header */}
-        <header className="h-16 border-b border-white/5 flex items-center justify-between px-4 md:px-8 z-10 bg-[#0f172a]/80 backdrop-blur-xl">
+        <header className="h-14 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 md:px-6 z-10 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-xl transition-colors duration-200">
             <div className="flex items-center gap-4">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-slate-400 hover:text-white">
-                    <Menu className="w-6 h-6" />
+                <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <Menu className="w-5 h-5" />
                 </button>
-                <h1 className="text-lg font-semibold text-white tracking-tight hidden sm:block">
-                    {viewMode === ViewMode.LEADERBOARD ? 'Team Rankings' : 'My Workspace'}
+                {isSidebarCollapsed && (
+                    <button 
+                        onClick={() => setIsSidebarCollapsed(false)}
+                        className="hidden md:block p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
+                        title="Open Sidebar"
+                    >
+                        <PanelLeft className="w-5 h-5" />
+                    </button>
+                )}
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                    {viewMode === ViewMode.LEADERBOARD ? 'Team Rankings' : (currentWorkspace?.name || 'My Workspace')}
                 </h1>
             </div>
 
-            <div className="flex items-center gap-4 flex-1 justify-end">
-                {/* Search Bar - Moved from Sidebar */}
-                <div className="relative hidden md:block w-64 lg:w-96 group">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-4 w-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                    </div>
-                    <input
-                        type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-lg leading-5 bg-slate-800/50 text-slate-300 placeholder-slate-500 focus:outline-none focus:bg-slate-800 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
-                        placeholder="Search tasks... (Cmd+K)"
-                        onClick={() => setShowCommandPalette(true)}
-                        readOnly
-                    />
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <span className="text-xs text-slate-600 border border-slate-700 rounded px-1.5 py-0.5">⌘K</span>
-                    </div>
-                </div>
-
-                {/* Streak Counter */}
-                <div className="flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-full">
-                    <Flame className={`w-4 h-4 text-orange-500 ${user?.streak && user.streak > 0 ? 'fill-orange-500 animate-pulse' : ''}`} />
-                    <span className="text-sm font-bold text-orange-400">{user?.streak || 0}</span>
-                </div>
-
-                <div className="h-6 w-px bg-white/10 mx-2" />
-                
+            <div className="flex items-center gap-2 md:gap-4">
+                {/* Theme Toggle */}
                 <button 
-                    onClick={() => setShowProfile(true)}
-                    className="w-8 h-8 rounded-full border-2 border-indigo-500/50 hover:border-indigo-400 shadow-sm transition-all hover:scale-105 overflow-hidden"
+                    onClick={toggleTheme}
+                    className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
                 >
-                    <img 
-                        src={user?.avatarUrl} 
-                        alt="User" 
-                        className="w-full h-full object-cover" 
-                    />
+                    {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+
+                {/* View Switcher */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowViewMenu(!showViewMenu)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-colors"
+                    >
+                        <SlidersHorizontal className="w-4 h-4" />
+                        <span className="hidden sm:inline">View</span>
+                    </button>
+
+                    <AnimatePresence>
+                        {showViewMenu && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowViewMenu(false)} />
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden z-50"
+                                >
+                                    <div className="p-1">
+                                        <div className="px-3 py-2 text-[10px] font-bold text-slate-500 uppercase">Layout</div>
+                                        {viewOptions.map(option => (
+                                            <button
+                                                key={option.mode}
+                                                onClick={() => {
+                                                    setViewMode(option.mode);
+                                                    setShowViewMenu(false);
+                                                }}
+                                                className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                                                    viewMode === option.mode 
+                                                        ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300' 
+                                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5'
+                                                }`}
+                                            >
+                                                <option.icon className="w-4 h-4" />
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Notifications Bell */}
+                <button 
+                  onClick={() => setViewMode(ViewMode.INBOX)}
+                  className="relative p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {invitations.length > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  )}
                 </button>
             </div>
         </header>
 
         {/* View Area */}
         <div className="flex-1 overflow-hidden relative z-0">
-          <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-6">
+          <div className="h-full overflow-y-auto custom-scrollbar w-full">
             <AnimatePresence mode="wait">
                 <motion.div
                     key={viewMode}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.02 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="h-full max-w-7xl mx-auto"
+                    className="h-full"
                 >
                     {renderView()}
                 </motion.div>
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Global Chat Interface for Task Creation */}
-        <div className="absolute bottom-8 right-8 z-40 flex items-center gap-3">
-            {/* Voice Transcript Display */}
-            <AnimatePresence>
-                {isListening && (
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        className="bg-black/80 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl text-sm font-mono text-indigo-300"
-                    >
-                        {transcript}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Chat Input Popover */}
-            <AnimatePresence>
-                {showChatInput && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                        className="absolute bottom-20 right-0 w-80 bg-[#1e293b] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl"
-                    >
-                        <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <MessageSquarePlus className="w-4 h-4 text-indigo-400" />
-                                <span className="text-sm font-semibold text-white">Quick Add Task</span>
-                            </div>
-                            <button onClick={() => setShowChatInput(false)} className="text-slate-500 hover:text-white">
-                                ×
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                if (chatMessage.trim()) {
-                                    addTask(chatMessage);
-                                    setChatMessage('');
-                                    setShowChatInput(false);
-                                }
-                            }} className="flex gap-2">
-                                <input 
-                                    autoFocus
-                                    value={chatMessage}
-                                    onChange={(e) => setChatMessage(e.target.value)}
-                                    placeholder="Type your task here..."
-                                    className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
-                                />
-                                <motion.button
-                                    type="submit"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    disabled={!chatMessage.trim()}
-                                    className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl hover:shadow-lg hover:shadow-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Send className="w-5 h-5 text-white" />
-                                </motion.button>
-                            </form>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Voice Input Button */}
-            <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleMic}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg border border-white/10 transition-all relative overflow-hidden ${isListening ? 'bg-red-500 shadow-red-500/40' : 'bg-purple-600 shadow-purple-600/40'}`}
-            >
-                <div className={`absolute inset-0 bg-white/20 rounded-full animate-ping ${isListening ? 'block' : 'hidden'}`} />
-                <Mic className="w-6 h-6 text-white relative z-10" />
-            </motion.button>
-
-            {/* Chat Input Button */}
-            <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowChatInput(!showChatInput)}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg border border-white/10 transition-all relative overflow-hidden ${showChatInput ? 'bg-indigo-500 shadow-indigo-500/40' : 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-blue-600/40'}`}
-            >
-                <MessageSquarePlus className="w-6 h-6 text-white relative z-10" />
-            </motion.button>
-        </div>
-
       </main>
+
+
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <InviteModal
+          workspaces={workspaces}
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          onInvite={createInvitation}
+        />
+      )}
 
       {/* Profile Modal */}
       <ProfileModal isOpen={showProfile} onClose={() => setShowProfile(false)} />
+
+      {/* Voice Input */}
+      <VoiceInput />
     </div>
   );
 };

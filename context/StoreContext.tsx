@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { Task, TaskStatus, User, ViewMode, Workspace, WorkspaceType, Block } from '../types';
-import { authAPI, taskAPI, workspaceAPI } from '../services/api';
+import { Task, TaskStatus, User, ViewMode, Workspace, WorkspaceType, Block, Invitation } from '../types';
+import { authAPI, taskAPI, workspaceAPI, invitationAPI } from '../services/api';
 
 interface StoreState {
   user: User | null;
@@ -12,6 +12,7 @@ interface StoreState {
   isAuthenticated: boolean;
   isLoading: boolean;
   showCommandPalette: boolean;
+  invitations: Invitation[];
 }
 
 interface StoreActions {
@@ -21,6 +22,8 @@ interface StoreActions {
   setToken: (token: string) => Promise<void>;
   switchWorkspace: (workspaceId: string) => void;
   createWorkspace: (name: string, type: WorkspaceType) => Promise<void>;
+  updateWorkspace: (workspaceId: string, name: string) => Promise<void>;
+  deleteWorkspace: (workspaceId: string) => Promise<void>;
   addTask: (title: string) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -32,6 +35,11 @@ interface StoreActions {
   isListening: boolean;
   transcript: string;
   toggleMic: () => void;
+  createInvitation: (workspaceId: string, email: string, role?: 'MEMBER' | 'ADMIN') => Promise<void>;
+  loadInvitations: () => Promise<void>;
+  acceptInvitation: (id: string) => Promise<void>;
+  rejectInvitation: (id: string) => Promise<void>;
+  loadWorkspaces: () => Promise<void>;
 }
 
 const StoreContext = createContext<(StoreState & StoreActions) | undefined>(undefined);
@@ -46,6 +54,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Voice Command Logic
   const toggleMic = () => {
@@ -114,7 +124,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         try {
           const { data } = await authAPI.getMe();
           setUser(data);
-          await loadWorkspaces();
+          // loadWorkspaces will be triggered by useEffect [user]
         } catch (error) {
           console.error('Session expired:', error);
           localStorage.removeItem('nebula_token');
@@ -128,7 +138,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Load workspaces when user changes
   const loadWorkspaces = async () => {
     try {
+      console.log('StoreContext: Loading workspaces...');
       const { data } = await workspaceAPI.getWorkspaces();
+      console.log('StoreContext: Loaded workspaces:', data);
       setWorkspaces(data);
       if (data.length > 0 && !currentWorkspace) {
         setCurrentWorkspace(data[0]); // Default to first workspace
@@ -138,25 +150,37 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  // Load tasks when workspace changes
-  useEffect(() => {
-    const loadTasks = async () => {
-      if (!currentWorkspace) {
-        setTasks([]);
-        return;
-      }
-      
-      try {
-        const { data } = await taskAPI.getTasks(currentWorkspace.id);
-        setTasks(data);
-      } catch (error) {
-        console.error('Failed to load tasks:', error);
-        setTasks([]);
-      }
-    };
+  // Load tasks for current workspace
+  const loadTasks = async () => {
+    if (!currentWorkspace) {
+      setTasks([]);
+      return;
+    }
 
-    loadTasks();
+    try {
+      const { data } = await taskAPI.getTasks(currentWorkspace.id);
+      setTasks(data);
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+      setTasks([]);
+    }
+  };
+
+  // Reload tasks when workspace changes
+  useEffect(() => {
+    if (currentWorkspace) {
+      console.log('Workspace changed, loading tasks for:', currentWorkspace.id);
+      loadTasks();
+    } else {
+      setTasks([]);
+    }
   }, [currentWorkspace?.id]);
+
+  useEffect(() => {
+    if (user) {
+      loadWorkspaces();
+    }
+  }, [user]);
 
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
@@ -225,12 +249,48 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const createWorkspace = async (name: string, type: WorkspaceType) => {
     try {
       const { data } = await workspaceAPI.createWorkspace({ name, type });
-      setWorkspaces([...workspaces, data]);
+      setWorkspaces(prev => [...prev, data]);
       setCurrentWorkspace(data);
-      localStorage.setItem('nebula_current_workspace', data.id);
     } catch (error: any) {
       console.error('Failed to create workspace:', error);
-      throw new Error(error.response?.data?.error || 'Failed to create workspace');
+      throw error;
+    }
+  };
+
+  const updateWorkspace = async (workspaceId: string, name: string) => {
+    try {
+      const { data } = await workspaceAPI.updateWorkspace(workspaceId, name);
+      
+      // Update in workspaces list
+      setWorkspaces(prev => prev.map(w => 
+        w.id === workspaceId ? { ...w, name: data.name } : w
+      ));
+      
+      // Update current workspace if it's the one being edited
+      if (currentWorkspace?.id === workspaceId) {
+        setCurrentWorkspace(prev => prev ? { ...prev, name: data.name } : null);
+      }
+    } catch (error: any) {
+      console.error('Failed to update workspace:', error);
+      throw error;
+    }
+  };
+
+  const deleteWorkspace = async (workspaceId: string) => {
+    try {
+      await workspaceAPI.deleteWorkspace(workspaceId);
+      
+      // Remove from workspaces list
+      setWorkspaces(prev => prev.filter(w => w.id !== workspaceId));
+      
+      // If deleting current workspace, switch to another one
+      if (currentWorkspace?.id === workspaceId) {
+        const remainingWorkspaces = workspaces.filter(w => w.id !== workspaceId);
+        setCurrentWorkspace(remainingWorkspaces.length > 0 ? remainingWorkspaces[0] : null);
+      }
+    } catch (error: any) {
+      console.error('Failed to delete workspace:', error);
+      throw error;
     }
   };
 
@@ -295,6 +355,57 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     refreshUser();
   };
 
+  // Invitation methods
+  const loadInvitations = async () => {
+    try {
+      const { data } = await invitationAPI.getMyInvitations();
+      setInvitations(data);
+    } catch (error) {
+      console.error('Failed to load invitations:', error);
+      setInvitations([]);
+    }
+  };
+
+  const createInvitation = async (workspaceId: string, email: string, role: 'MEMBER' | 'ADMIN' = 'MEMBER') => {
+    try {
+      console.log('CreateInvitation called with:', { workspaceId, email, role });
+      console.log('Current workspace:', currentWorkspace);
+      await invitationAPI.createInvitation({ workspaceId, inviteeEmail: email, role });
+    } catch (error: any) {
+      console.error('Failed to create invitation:', error);
+      throw error;
+    }
+  };
+
+  const acceptInvitation = async (id: string) => {
+    try {
+      const { data } = await invitationAPI.acceptInvitation(id);
+      // Reload workspaces and invitations
+      await loadWorkspaces();
+      await loadInvitations();
+    } catch (error: any) {
+      console.error('Failed to accept invitation:', error);
+      throw error;
+    }
+  };
+
+  const rejectInvitation = async (id: string) => {
+    try {
+      await invitationAPI.rejectInvitation(id);
+      await loadInvitations();
+    } catch (error: any) {
+      console.error('Failed to reject invitation:', error);
+      throw error;
+    }
+  };
+
+  // Load invitations when user is authenticated
+  useEffect(() => {
+    if (user) {
+      loadInvitations();
+    }
+  }, [user]);
+
   const value = {
     user,
     workspaces,
@@ -304,6 +415,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     isAuthenticated: !!user,
     isLoading,
     showCommandPalette,
+    invitations,
+    showNotifications,
+    setShowNotifications,
     setShowCommandPalette,
     login,
     register,
@@ -314,13 +428,20 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     updateTask,
     deleteTask,
     createWorkspace,
+    updateWorkspace,
+    deleteWorkspace,
     setViewMode,
     moveTask,
     incrementStreak,
     refreshUser,
     isListening,
     transcript,
-    toggleMic
+    toggleMic,
+    createInvitation,
+    loadInvitations,
+    acceptInvitation,
+    rejectInvitation,
+    loadWorkspaces,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

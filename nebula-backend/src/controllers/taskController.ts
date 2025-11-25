@@ -87,6 +87,7 @@ export const getTasks = async (req: Request, res: Response): Promise<void> => {
       tags: task.tags,
       assigneeId: task.assigneeId?.toString(),
       aiEnhanced: task.aiEnhanced,
+      dueDate: task.dueDate,
       createdAt: new Date(task.createdAt).getTime()
     }));
 
@@ -107,7 +108,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
       throw new ApiError(401, 'Not authenticated');
     }
 
-    const { workspaceId, title, contentBlocks, tags } = req.body as CreateTaskRequest;
+    const { workspaceId, title, contentBlocks, tags, dueDate } = req.body as CreateTaskRequest;
 
     if (!workspaceId || !title) {
       throw new ApiError(400, 'Workspace ID and title are required');
@@ -123,7 +124,8 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
       }],
       status: TaskStatus.TODO,
       tags: tags || [],
-      aiEnhanced: false
+      aiEnhanced: false,
+      dueDate: dueDate
     });
 
     await task.save();
@@ -136,6 +138,7 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
       status: task.status,
       tags: task.tags,
       aiEnhanced: task.aiEnhanced,
+      dueDate: task.dueDate,
       createdAt: task.createdAt.getTime()
     };
 
@@ -174,6 +177,7 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
     if (updates.status !== undefined) task.status = updates.status;
     if (updates.tags !== undefined) task.tags = updates.tags;
     if (updates.aiEnhanced !== undefined) task.aiEnhanced = updates.aiEnhanced;
+    if (updates.dueDate !== undefined) task.dueDate = updates.dueDate;
 
     await task.save();
 
@@ -190,6 +194,7 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
       status: task.status,
       tags: task.tags,
       aiEnhanced: task.aiEnhanced,
+      dueDate: task.dueDate,
       createdAt: task.createdAt.getTime()
     };
 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8299').replace(/\/$/, '');
+const API_URL = ((import.meta as any).env.VITE_API_URL || 'http://localhost:8299').replace(/\/$/, '');
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -55,8 +55,12 @@ export const workspaceAPI = {
   getWorkspaces: () => api.get('/workspaces'),
   createWorkspace: (data: { name: string; type: string }) =>
     api.post('/workspaces', data),
-  joinWorkspace: (inviteCode: string) =>
-    api.post('/workspaces/join', { inviteCode })
+  joinWorkspace: (data: { inviteCode: string }) =>
+    api.post('/workspaces/join', data),
+  getMembers: (workspaceId: string) => api.get(`/workspaces/${workspaceId}/members`),
+  removeMember: (workspaceId: string, userId: string) => api.delete(`/workspaces/${workspaceId}/members/${userId}`),
+  updateWorkspace: (workspaceId: string, name: string) => api.put(`/workspaces/${workspaceId}`, { name }),
+  deleteWorkspace: (workspaceId: string) => api.delete(`/workspaces/${workspaceId}`)
 };
 
 export const aiAPI = {
@@ -68,3 +72,13 @@ export const aiAPI = {
 export const leaderboardAPI = {
   getLeaderboard: (workspaceId: string) => api.get(`/leaderboard/${workspaceId}`),
 };
+
+export const invitationAPI = {
+  createInvitation: (data: { workspaceId: string; inviteeEmail: string; role?: 'MEMBER' | 'ADMIN' }) =>
+    api.post('/invitations', data),
+  getMyInvitations: () => api.get('/invitations/me'),
+  acceptInvitation: (id: string) => api.post(`/invitations/${id}/accept`),
+  rejectInvitation: (id: string) => api.post(`/invitations/${id}/reject`),
+  getWorkspaceInvitations: (workspaceId: string) => api.get(`/invitations/workspace/${workspaceId}`)
+};
+

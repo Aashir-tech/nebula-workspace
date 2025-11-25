@@ -11,7 +11,11 @@ export enum ViewMode {
   LIST = 'LIST',
   BOARD = 'BOARD',
   GRID = 'GRID',
-  LEADERBOARD = 'LEADERBOARD'
+  LEADERBOARD = 'LEADERBOARD',
+  INBOX = 'INBOX',
+  TODAY = 'TODAY',
+  FILTERS = 'FILTERS',
+  CALENDAR = 'CALENDAR'
 }
 
 export enum WorkspaceType {
@@ -23,7 +27,33 @@ export interface Workspace {
   id: string;
   name: string;
   type: WorkspaceType;
-  role: 'OWNER' | 'MEMBER' | 'VIEWER';
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+}
+
+export interface WorkspaceMember {
+  userId: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  joinedAt: number;
+}
+
+export interface Invitation {
+  id: string;
+  workspace: {
+    id: string;
+    name: string;
+    type: WorkspaceType;
+  };
+  invitedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  role: 'ADMIN' | 'MEMBER';
+  createdAt: number;
+  expiresAt: number;
 }
 
 export interface User {
@@ -55,6 +85,7 @@ export interface Task {
   tags: string[];
   assigneeId?: string;
   aiEnhanced?: boolean;
+  dueDate?: string;
   createdAt: number;
 }
 

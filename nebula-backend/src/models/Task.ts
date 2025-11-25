@@ -59,6 +59,10 @@ const TaskSchema = new Schema<ITask>(
     aiEnhanced: { 
       type: Boolean, 
       default: false 
+    },
+    dueDate: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }
