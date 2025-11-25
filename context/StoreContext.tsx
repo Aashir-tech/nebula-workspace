@@ -41,6 +41,8 @@ interface StoreActions {
   acceptInvitation: (id: string) => Promise<void>;
   rejectInvitation: (id: string) => Promise<void>;
   loadWorkspaces: () => Promise<void>;
+  updateUserProfile: (name: string) => Promise<void>;
+  deleteUser: () => Promise<void>;
 }
 
 const StoreContext = createContext<(StoreState & StoreActions) | undefined>(undefined);
@@ -134,8 +136,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           localStorage.removeItem('nebula_user');
         }
       }
-      // Add a small delay to show the premium loader
-      setTimeout(() => setIsInitializing(false), 1500);
+      // Mark initialization complete
+      setIsInitializing(false);
     };
     initAuth();
   }, []);
@@ -411,6 +413,27 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user]);
 
+  const updateUserProfile = async (name: string) => {
+    try {
+      const { data } = await authAPI.updateProfile({ name });
+      setUser(data);
+      localStorage.setItem('nebula_user', JSON.stringify(data));
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      throw error;
+    }
+  };
+
+  const deleteUser = async () => {
+    try {
+      await authAPI.deleteAccount();
+      logout();
+    } catch (error: any) {
+      console.error('Failed to delete account:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     workspaces,
@@ -448,6 +471,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     acceptInvitation,
     rejectInvitation,
     loadWorkspaces,
+    updateUserProfile,
+    deleteUser,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

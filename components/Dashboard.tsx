@@ -83,7 +83,6 @@ const Dashboard: React.FC = () => {
     { mode: ViewMode.BOARD, label: 'Board', icon: Layout },
     { mode: ViewMode.LIST, label: 'List', icon: List },
     { mode: ViewMode.GRID, label: 'Gallery', icon: Grid },
-    { mode: ViewMode.LEADERBOARD, label: 'Leaderboard', icon: Trophy },
   ];
 
   return (

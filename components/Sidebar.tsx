@@ -7,7 +7,8 @@ import {
   PlusCircle, ChevronDown, Plus, LogOut, Briefcase, User,
   Edit, Trash2, UserPlus, Users,
   Calendar1Icon,
-  Calendar1
+  Calendar1,
+  Trophy
 } from 'lucide-react';
 import { CreateWorkspaceModal, ProfileModal, DeleteWorkspaceModal } from './Modals';
 import InviteModal from './InviteModal';
@@ -234,6 +235,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
                         label="Filters & Labels" 
                         active={viewMode === ViewMode.FILTERS}
                         onClick={() => setViewMode(ViewMode.FILTERS)} 
+                    />
+                    <NavItem 
+                        icon={Trophy} 
+                        label="Leaderboard" 
+                        active={viewMode === ViewMode.LEADERBOARD}
+                        onClick={() => setViewMode(ViewMode.LEADERBOARD)} 
                     />
                 </div>
 

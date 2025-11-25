@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Briefcase, User, Trophy, Flame, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Plus, Briefcase, User, Trophy, Flame, Trash2, AlertTriangle, CheckCircle, Edit } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { WorkspaceType } from '../types';
 
@@ -94,9 +94,39 @@ export const CreateWorkspaceModal: React.FC<ModalProps> = ({ isOpen, onClose }) 
 };
 
 export const ProfileModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
-    const { user } = useStore();
+    const { user, updateUserProfile, deleteUser } = useStore();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     
     if (!user) return null;
+
+    const handleEditStart = () => {
+        setEditedName(user.name);
+        setIsEditing(true);
+    };
+
+    const handleEditSave = async () => {
+        if (!editedName.trim()) return;
+        try {
+            await updateUserProfile(editedName.trim());
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Failed to update name:', error);
+        }
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await deleteUser();
+            // User will be logged out and redirected by the deleteUser action
+        } catch (error) {
+            console.error('Failed to delete account:', error);
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <AnimatePresence>
@@ -128,7 +158,30 @@ export const ProfileModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                                 </div>
                             </div>
                             <div className="text-center mb-6">
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user.name}</h2>
+                                {isEditing ? (
+                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            value={editedName}
+                                            onChange={(e) => setEditedName(e.target.value)}
+                                            className="text-xl font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                                            autoFocus
+                                        />
+                                        <button onClick={handleEditSave} className="text-green-500 hover:text-green-600">
+                                            <CheckCircle className="w-5 h-5" />
+                                        </button>
+                                        <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600">
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center gap-2">
+                                        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user.name}</h2>
+                                        <button onClick={handleEditStart} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
                                 <p className="text-slate-500 dark:text-slate-400 text-sm">{user.email}</p>
                             </div>
                             
@@ -150,6 +203,46 @@ export const ProfileModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                                     <span className="text-xs text-slate-500 block">Global</span>
                                 </div>
                             </div>
+
+                            {/* Delete Account Section */}
+                            {!showDeleteConfirm ? (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors font-medium text-sm"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Account
+                                </button>
+                            ) : (
+                                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-4">
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="font-semibold text-red-900 dark:text-red-200 text-sm mb-1">
+                                                Are you absolutely sure?
+                                            </h4>
+                                            <p className="text-xs text-red-700 dark:text-red-300">
+                                                This will permanently delete your account, all workspaces you own, and all associated data. This action cannot be undone.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(false)}
+                                            className="flex-1 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm font-medium"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            disabled={isDeleting}
+                                            className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50"
+                                        >
+                                            {isDeleting ? 'Deleting...' : 'Delete Forever'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 </div>

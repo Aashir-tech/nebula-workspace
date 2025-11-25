@@ -163,3 +163,81 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     }
   }
 };
+
+export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new ApiError(401, 'Not authenticated');
+    }
+
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      throw new ApiError(400, 'Name is required');
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    user.name = name.trim();
+    await user.save();
+
+    res.json({
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      streak: user.streak,
+      lastTaskDate: user.lastTaskDate ? user.lastTaskDate.getTime() : null
+    });
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({ error: error.message });
+    } else {
+      console.error('Update profile error:', error);
+      res.status(500).json({ error: 'Failed to update profile' });
+    }
+  }
+};
+
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new ApiError(401, 'Not authenticated');
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    // Delete all workspaces owned by the user
+    await Workspace.deleteMany({ ownerId: user._id });
+
+    // Remove user from workspaces they're a member of
+    await Workspace.updateMany(
+      { 'members.userId': user._id.toString() },
+      { $pull: { members: { userId: user._id.toString() } } }
+    );
+
+    // Delete all tasks in user's workspaces
+    const Task = (await import('../models/Task.js')).default;
+    const userWorkspaceIds = user.workspaces.map(w => w.workspaceId);
+    await Task.deleteMany({ workspaceId: { $in: userWorkspaceIds } });
+
+    // Delete the user
+    await User.findByIdAndDelete(user._id);
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({ error: error.message });
+    } else {
+      console.error('Delete user error:', error);
+      res.status(500).json({ error: 'Failed to delete account' });
+    }
+  }
+};
+

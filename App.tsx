@@ -9,16 +9,19 @@ const AppContent: React.FC = () => {
   
   // Handle OAuth callback
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      
+      if (token) {
+        // Store token and authenticate
+        await setToken(token);
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
     
-    if (token) {
-      // Store token and redirect
-      localStorage.setItem('nebula_token', token);
-      setToken(token);
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    handleOAuthCallback();
   }, [setToken]);
   
   if (isInitializing) {

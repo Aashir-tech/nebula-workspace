@@ -36,11 +36,11 @@ export default api;
 
 // API functions
 export const authAPI = {
-  register: (data: { name: string; email: string; password: string }) =>
-    api.post('/auth/register', data),
-  login: (data: { email: string; password: string }) =>
-    api.post('/auth/login', data),
-  getMe: () => api.get('/auth/me')
+  register: (data: any) => api.post('/auth/register', data),
+  login: (data: any) => api.post('/auth/login', data),
+  getMe: () => api.get('/auth/me'),
+  updateProfile: (data: { name: string }) => api.patch('/auth/me', data),
+  deleteAccount: () => api.delete('/auth/me'),
 };
 
 export const taskAPI = {
