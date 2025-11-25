@@ -11,6 +11,7 @@ interface StoreState {
   viewMode: ViewMode;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
   showCommandPalette: boolean;
   invitations: Invitation[];
 }
@@ -116,6 +117,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
+  const [isInitializing, setIsInitializing] = useState(true);
+
   // Check for existing session on mount
   useEffect(() => {
     const initAuth = async () => {
@@ -131,6 +134,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           localStorage.removeItem('nebula_user');
         }
       }
+      // Add a small delay to show the premium loader
+      setTimeout(() => setIsInitializing(false), 1500);
     };
     initAuth();
   }, []);
@@ -414,6 +419,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     viewMode,
     isAuthenticated: !!user,
     isLoading,
+    isInitializing,
     showCommandPalette,
     invitations,
     showNotifications,

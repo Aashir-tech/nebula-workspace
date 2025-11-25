@@ -4,12 +4,22 @@ A next-generation, AI-powered collaborative workspace with fluid UI, real-time c
 
 ## ✨ Features
 
+### 🌌 The "Nebula" Experience
+- **Cosmic Aesthetic**: Deep space palette with immersive particle background systems
+- **Premium Glassmorphism**: Frosted glass cards with glowing borders and subtle highlights
+- **Fluid Animations**: Smooth transitions between states and interactive elements
+
 ### 🎯 Core Features
 - **Multi-View Task Management**: Kanban Board, List View, Grid Gallery, and Bento Dashboard
-- **Rich Content Blocks**: Text, code snippets, images, and more
+- **Rich Content Blocks**: Text, code snippets, images, and more with optimized performance
 - **Real-time Collaboration**: WebSocket-powered live updates
 - **AI Enhancement**: Gemini-powered text improvement and task insights
-- **Voice Commands**: Create tasks using voice input
+- **Voice Command Orb**: Interactive floating orb for voice-to-task creation with visual feedback
+
+### 👥 Workspace & Team
+- **Member Management**: View and manage workspace members directly from the sidebar
+- **Smart Invitations**: Invite teammates via email with role assignment
+- **Real-time Notifications**: Instant alerts for invites and updates
 
 ### 🏆 Gamification
 - **Daily Streaks**: Track consecutive days of task completion
@@ -17,16 +27,15 @@ A next-generation, AI-powered collaborative workspace with fluid UI, real-time c
 - **Achievement System**: Earn badges and points
 
 ### 🔐 Authentication
-- **Traditional Auth**: Email/password login with JWT
+- **Nebula Auth**: Custom-designed login/signup with password toggle and smooth mode switching
 - **Google OAuth**: One-click login with Google account
 - **Secure Sessions**: Token-based authentication with automatic refresh
 
 ### 🎨 UI/UX
-- **Modern Glassmorphism**: Sleek, translucent design elements
-- **Dark Mode**: Eye-friendly dark theme
-- **Responsive Design**: Works seamlessly on desktop and mobile
-- **Smooth Animations**: Motion-powered transitions
-- **Custom Fonts**: Outfit & Space Grotesk for unique aesthetics
+- **Responsive Design**: Mobile-first approach for all screen sizes
+- **Dark Mode Default**: Optimized for eye comfort and battery life
+- **Custom Typography**: Clean, modern fonts for maximum readability
+- **Micro-interactions**: Hover effects, focus rings, and tactile feedback
 
 ---
 
@@ -43,7 +52,6 @@ A next-generation, AI-powered collaborative workspace with fluid UI, real-time c
 - **Node.js** + Express
 - **MongoDB** + Mongoose
 - **Socket.io** - Real-time updates
-- **Passport.js** - OAuth authentication
 - **Google Gemini AI** - AI-powered features
 - **JWT** - Secure authentication
 

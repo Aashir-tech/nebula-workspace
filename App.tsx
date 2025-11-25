@@ -2,9 +2,10 @@ import React, { useEffect } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import Loader from './components/Loader';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, setToken } = useStore();
+  const { isAuthenticated, setToken, isInitializing } = useStore();
   
   // Handle OAuth callback
   useEffect(() => {
@@ -19,6 +20,10 @@ const AppContent: React.FC = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [setToken]);
+  
+  if (isInitializing) {
+    return <Loader />;
+  }
   
   return isAuthenticated ? <Dashboard /> : <Auth />;
 };

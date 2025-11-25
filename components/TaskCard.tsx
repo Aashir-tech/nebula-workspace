@@ -86,8 +86,39 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     }, 150);
   };
 
+  const [localBlocks, setLocalBlocks] = useState(task.contentBlocks || []);
+  const blocksRef = useRef(localBlocks);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setLocalBlocks(task.contentBlocks || []);
+  }, [task.id]);
+
+  useEffect(() => {
+    blocksRef.current = localBlocks;
+  }, [localBlocks]);
+
+  // Cleanup: Save pending changes on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+        updateTask(task.id, { contentBlocks: blocksRef.current });
+      }
+    };
+  }, [task.id, updateTask]);
+
   const handleBlocksChange = useCallback((newBlocks: any[]) => {
-    updateTask(task.id, { contentBlocks: newBlocks });
+    setLocalBlocks(newBlocks);
+    
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    
+    updateTimeoutRef.current = setTimeout(() => {
+      updateTask(task.id, { contentBlocks: newBlocks });
+      updateTimeoutRef.current = null;
+    }, 1000);
   }, [task.id, updateTask]);
 
   return (
@@ -346,14 +377,30 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         {isExpanded && (
           <motion.div
             layout
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
+            animate={{ 
+                height: 'auto', 
+                opacity: 1,
+                transition: {
+                    height: { duration: 0.4, type: "spring", bounce: 0.2 },
+                    opacity: { duration: 0.25, delay: 0.1 }
+                },
+                transitionEnd: { overflow: 'visible' }
+            }}
+            exit={{ 
+                height: 0, 
+                opacity: 0, 
+                overflow: 'hidden',
+                transition: {
+                    height: { duration: 0.3, type: "spring", bounce: 0 },
+                    opacity: { duration: 0.2 }
+                }
+            }}
             className="border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-black/20"
           >
             <div className="p-4 cursor-text relative" onClick={(e) => e.stopPropagation()}>
                 <BlockEditor 
-                    blocks={task.contentBlocks || []} 
+                    blocks={localBlocks} 
                     onChange={handleBlocksChange} 
                 />
             </div>
