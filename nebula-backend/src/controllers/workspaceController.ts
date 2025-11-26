@@ -241,6 +241,87 @@ export const getWorkspaceMembers = async (req: Request, res: Response): Promise<
   }
 };
 
+// Add member to workspace
+export const addMember = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new ApiError(401, 'Not authenticated');
+    }
+
+    const { id } = req.params;
+    const { email, role = 'MEMBER' } = req.body;
+
+    console.log('Add member request:', { workspaceId: id, email, role, body: req.body });
+
+    if (!email) {
+      throw new ApiError(400, 'Email is required');
+    }
+
+    const workspace = await Workspace.findById(id);
+    if (!workspace) {
+      throw new ApiError(404, 'Workspace not found');
+    }
+
+    // Check if requester is owner or admin
+    const isOwner = workspace.ownerId.toString() === req.user?.id;
+    const requesterMember = workspace.members?.find((m: any) => m.userId.toString() === req.user?.id);
+    const isAdmin = requesterMember?.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      throw new ApiError(403, 'Only workspace owners and admins can add members');
+    }
+
+    // Find user by email
+    const newMember = await User.findOne({ email: email.toLowerCase() });
+    if (!newMember) {
+      throw new ApiError(404, 'User not found. Please ask them to sign up first.');
+    }
+
+    // Check if user is already a member
+    const isMember = workspace.members?.some((m: any) => m.userId.toString() === newMember._id.toString());
+    if (isMember || workspace.ownerId.toString() === newMember._id.toString()) {
+      throw new ApiError(409, 'User is already a member of this workspace');
+    }
+
+    // Add to workspace members
+    if (!workspace.members) {
+      workspace.members = [];
+    }
+    workspace.members.push({
+      userId: newMember._id as any,
+      role: role as any,
+      joinedAt: new Date()
+    });
+    await workspace.save();
+
+    // Add workspace to user
+    if (!newMember.workspaces) {
+      newMember.workspaces = [];
+    }
+    newMember.workspaces.push({
+      workspaceId: workspace._id.toString(),
+      role: role as any
+    });
+    await newMember.save();
+
+    res.status(201).json({
+      id: newMember._id.toString(),
+      name: newMember.name || '',
+      email: newMember.email || '',
+      avatarUrl: newMember.avatarUrl || '',
+      role: role as 'ADMIN' | 'MEMBER',
+      joinedAt: new Date()
+    });
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      res.status(error.statusCode).json({ error: error.message });
+    } else {
+      console.error('Add member error:', error);
+      res.status(500).json({ error: 'Failed to add member' });
+    }
+  }
+};
+
 // Remove member from workspace
 export const removeMember = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -349,38 +430,22 @@ export const deleteWorkspace = async (req: Request, res: Response): Promise<void
       throw new ApiError(404, 'Workspace not found');
     }
 
-    // Only owner can delete workspace
+    // Check if user is the owner
     if (workspace.ownerId.toString() !== req.user.id) {
-      throw new ApiError(403, 'Only workspace owner can delete workspace');
+      throw new ApiError(403, 'Only workspace owners can delete workspaces');
     }
 
-    // Cannot delete personal workspace
-    if (workspace.type === WorkspaceType.PERSONAL) {
-      throw new ApiError(400, 'Cannot delete personal workspace');
-    }
-
-    // Remove workspace from all members
-    if (workspace.members && workspace.members.length > 0) {
-      for (const member of workspace.members) {
-        const user = await User.findById(member.userId);
-        if (user) {
-          user.workspaces = user.workspaces.filter(w => w.workspaceId.toString() !== id);
-          await user.save();
-        }
-      }
-    }
-
-    // Remove workspace from owner
-    const owner = await User.findById(workspace.ownerId);
-    if (owner) {
-      owner.workspaces = owner.workspaces.filter(w => w.workspaceId.toString() !== id);
-      await owner.save();
-    }
-
-    // Delete all tasks in workspace
+    // Delete all tasks in this workspace
     await Task.deleteMany({ workspaceId: id });
 
-    // Delete workspace
+    // Remove workspace from all members' workspace arrays
+    const memberUserIds = workspace.members?.map((m: any) => m.userId) || [];
+    await User.updateMany(
+      { _id: { $in: [...memberUserIds, workspace.ownerId] } },
+      { $pull: { workspaces: { workspaceId: id } } }
+    );
+
+    // Delete the workspace
     await Workspace.findByIdAndDelete(id);
 
     res.json({ message: 'Workspace deleted successfully' });
@@ -393,4 +458,3 @@ export const deleteWorkspace = async (req: Request, res: Response): Promise<void
     }
   }
 };
-

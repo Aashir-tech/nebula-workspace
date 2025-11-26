@@ -18,20 +18,22 @@ const InviteModal: React.FC<InviteModalProps> = ({
   onRetry
 }: InviteModalProps) => {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Filter to only show TEAM workspaces
+  const teamWorkspaces = workspaces.filter(ws => ws.type === 'TEAM');
+
   useEffect(() => {
-    if (isOpen && workspaces.length > 0) {
-      // Default to first workspace if none selected
+    if (isOpen && teamWorkspaces.length > 0) {
+      // Default to first team workspace if none selected
       if (!selectedWorkspaceId) {
-        setSelectedWorkspaceId(workspaces[0].id);
+        setSelectedWorkspaceId(teamWorkspaces[0].id);
       }
     }
-  }, [isOpen, workspaces]);
+  }, [isOpen, teamWorkspaces]);
 
   if (!isOpen) return null;
 
@@ -40,8 +42,8 @@ const InviteModal: React.FC<InviteModalProps> = ({
     setError('');
     setSuccess(false);
 
-    if (workspaces.length === 0) {
-        setError('Please create a workspace first then add members inside it');
+    if (teamWorkspaces.length === 0) {
+        setError('Please create a team workspace first to invite members');
         return;
     }
 
@@ -57,8 +59,8 @@ const InviteModal: React.FC<InviteModalProps> = ({
 
     setIsLoading(true);
     try {
-      console.log('InviteModal calling onInvite with:', { workspaceId: selectedWorkspaceId, email, role });
-      await onInvite(selectedWorkspaceId, email, role);
+      console.log('InviteModal calling onInvite with:', { workspaceId: selectedWorkspaceId, email, role: 'MEMBER' });
+      await onInvite(selectedWorkspaceId, email, 'MEMBER');
       setSuccess(true);
       setEmail('');
       setTimeout(() => {
@@ -72,7 +74,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
     }
   };
 
-  const hasWorkspaces = workspaces.length > 0;
+  const hasWorkspaces = teamWorkspaces.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -103,9 +105,9 @@ const InviteModal: React.FC<InviteModalProps> = ({
                     <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <AlertCircle className="w-8 h-8 text-red-500 dark:text-red-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Workspaces Found</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Team Workspaces Found</h3>
                     <p className="text-slate-500 dark:text-slate-400 mb-6">
-                        Please create a workspace first then add members inside it.
+                        Please create a team workspace first to invite members.
                     </p>
                     <div className="flex gap-3 justify-center">
                         <button
@@ -141,7 +143,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
                             className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all appearance-none"
                             disabled={isLoading}
                         >
-                            {workspaces.map(ws => (
+                            {teamWorkspaces.map(ws => (
                                 <option key={ws.id} value={ws.id}>
                                     {ws.name}
                                 </option>
@@ -167,39 +169,6 @@ const InviteModal: React.FC<InviteModalProps> = ({
                         disabled={isLoading}
                         autoFocus
                     />
-                    </div>
-                </div>
-
-                {/* Role Selection */}
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Role
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setRole('MEMBER')}
-                        className={`p-3 rounded-xl border transition-all ${
-                        role === 'MEMBER'
-                            ? 'bg-indigo-50 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                            : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                    >
-                        <div className="text-sm font-bold">Member</div>
-                        <div className="text-xs opacity-75 mt-1">Can view & edit</div>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setRole('ADMIN')}
-                        className={`p-3 rounded-xl border transition-all ${
-                        role === 'ADMIN'
-                            ? 'bg-indigo-50 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                            : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                    >
-                        <div className="text-sm font-bold">Admin</div>
-                        <div className="text-xs opacity-75 mt-1">Full access</div>
-                    </button>
                     </div>
                 </div>
 

@@ -11,13 +11,16 @@ export const createInvitation = async (req: Request, res: Response): Promise<voi
       throw new ApiError(401, 'Not authenticated');
     }
 
-    const { workspaceId, inviteeEmail, role = 'MEMBER' } = req.body;
-
-    console.log('Creating invitation:', { workspaceId, inviteeEmail, role, userId: req.user.id });
+    const { workspaceId, inviteeEmail, role } = req.body;
 
     if (!workspaceId || !inviteeEmail) {
       throw new ApiError(400, 'Workspace ID and invitee email are required');
     }
+
+    // Default to MEMBER role if not specified
+    const invitationRole = role || 'MEMBER';
+
+    console.log('Creating invitation:', { workspaceId, inviteeEmail, role: invitationRole, userId: req.user.id });
 
     // Verify workspace exists and user has permission
     const workspace = await Workspace.findById(workspaceId);
@@ -41,6 +44,12 @@ export const createInvitation = async (req: Request, res: Response): Promise<voi
       throw new ApiError(403, 'Only workspace owners and admins can invite users');
     }
 
+    // Check if invitee exists on platform
+    const invitedUser = await User.findOne({ email: inviteeEmail.toLowerCase() });
+    if (!invitedUser) {
+      throw new ApiError(404, 'User has not joined the platform yet. Please ask them to sign up first.');
+    }
+
     // Check if user is already invited
     const existingInvitation = await Invitation.findOne({
       workspaceId,
@@ -53,14 +62,11 @@ export const createInvitation = async (req: Request, res: Response): Promise<voi
     }
 
     // Check if user is already a member
-    const invitedUser = await User.findOne({ email: inviteeEmail.toLowerCase() });
-    if (invitedUser) {
-      const isMember = invitedUser.workspaces?.some(
-        w => w.workspaceId === workspaceId
-      );
-      if (isMember) {
-        throw new ApiError(409, 'User is already a member of this workspace');
-      }
+    const isMember = invitedUser.workspaces?.some(
+      w => w.workspaceId === workspaceId
+    );
+    if (isMember) {
+      throw new ApiError(409, 'User is already a member of this workspace');
     }
 
     // Create invitation
@@ -68,7 +74,7 @@ export const createInvitation = async (req: Request, res: Response): Promise<voi
       workspaceId,
       invitedBy: req.user.id,
       inviteeEmail: inviteeEmail.toLowerCase(),
-      role: role === 'ADMIN' ? 'ADMIN' : 'MEMBER',
+      role: invitationRole,
       status: 'pending'
     });
 

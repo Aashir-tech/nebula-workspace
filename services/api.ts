@@ -52,15 +52,19 @@ export const taskAPI = {
 };
 
 export const workspaceAPI = {
-  getWorkspaces: () => api.get('/workspaces'),
-  createWorkspace: (data: { name: string; type: string }) =>
-    api.post('/workspaces', data),
-  joinWorkspace: (data: { inviteCode: string }) =>
-    api.post('/workspaces/join', data),
+  getAll: () => api.get('/workspaces'),
+  create: (data: { name: string; type: string }) => api.post('/workspaces', data),
+  update: (id: string, data: { name: string }) => api.put(`/workspaces/${id}`, data),
+  deleteWorkspace: (id: string) => api.delete(`/workspaces/${id}`),
+  leaveWorkspace: (id: string) => api.post(`/workspaces/${id}/leave`),
+  join: (inviteCode: string) => api.post('/workspaces/join', { inviteCode }),
   getMembers: (workspaceId: string) => api.get(`/workspaces/${workspaceId}/members`),
-  removeMember: (workspaceId: string, userId: string) => api.delete(`/workspaces/${workspaceId}/members/${userId}`),
-  updateWorkspace: (workspaceId: string, name: string) => api.put(`/workspaces/${workspaceId}`, { name }),
-  deleteWorkspace: (workspaceId: string) => api.delete(`/workspaces/${workspaceId}`)
+  createInvitation: (data: { workspaceId: string; inviteeEmail: string; role?: string }) => 
+    api.post('/invitations', data),
+  addMember: (workspaceId: string, data: { email: string; role: string }) => 
+    api.post(`/workspaces/${workspaceId}/members`, data),
+  removeMember: (workspaceId: string, userId: string) =>
+    api.delete(`/workspaces/${workspaceId}/members/${userId}`)
 };
 
 export const aiAPI = {
@@ -74,11 +78,16 @@ export const leaderboardAPI = {
 };
 
 export const invitationAPI = {
-  createInvitation: (data: { workspaceId: string; inviteeEmail: string; role?: 'MEMBER' | 'ADMIN' }) =>
+  create: (data: { workspaceId: string; inviteeEmail: string; role?: string }) => 
     api.post('/invitations', data),
-  getMyInvitations: () => api.get('/invitations/me'),
-  acceptInvitation: (id: string) => api.post(`/invitations/${id}/accept`),
-  rejectInvitation: (id: string) => api.post(`/invitations/${id}/reject`),
-  getWorkspaceInvitations: (workspaceId: string) => api.get(`/invitations/workspace/${workspaceId}`)
+  getMyInvitations: () => api.get('/invitations/my'),
+  accept: (id: string) => api.post(`/invitations/${id}/accept`),
+  reject: (id: string) => api.post(`/invitations/${id}/reject`)
 };
 
+export const commentAPI = {
+  getComments: (taskId: string) => api.get(`/tasks/${taskId}/comments`),
+  createComment: (data: { taskId: string; content: string }) => api.post('/comments', data),
+  updateComment: (id: string, data: { content: string }) => api.patch(`/comments/${id}`, data),
+  deleteComment: (id: string) => api.delete(`/comments/${id}`)
+};

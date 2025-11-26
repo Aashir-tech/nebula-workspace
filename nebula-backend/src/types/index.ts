@@ -59,6 +59,17 @@ export interface ITask {
   assigneeId?: string;
   aiEnhanced: boolean;
   dueDate?: Date;
+  priority?: 'P1' | 'P2' | 'P3' | 'P4' | null;
+  labels?: string[];
+  assignedId?: string;
+  assignedTo?: string | null;
+  subtasks?: Array<{
+    id: string;
+    title: string;
+    completed: boolean;
+  }>;
+  reminder?: Date | null;
+  createdBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,6 +92,11 @@ export interface CreateTaskRequest {
   contentBlocks?: Block[];
   tags?: string[];
   dueDate?: Date;
+  priority?: 'P1' | 'P2' | 'P3' | 'P4' | null;
+  reminder?: {
+    type: '30min' | '1hour' | '3hours' | '1day' | 'custom';
+    time?: Date;
+  };
 }
 
 export interface UpdateTaskRequest {
@@ -90,6 +106,13 @@ export interface UpdateTaskRequest {
   tags?: string[];
   aiEnhanced?: boolean;
   dueDate?: Date;
+  priority?: 'P1' | 'P2' | 'P3' | 'P4' | null;
+  labels?: string[];
+  assignedTo?: string;
+  reminder?: {
+    type: '30min' | '1hour' | '3hours' | '1day' | 'custom';
+    time?: Date;
+  };
 }
 
 export interface AIEnhanceRequest {

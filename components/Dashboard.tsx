@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ViewMode } from '../types';
-import { BoardView, ListView, GridView, OverviewView, InboxView, TodayView, FiltersView, CalendarView } from './Views';
+import { OverviewView, BoardView, ListView, GridView, InboxView, TodayView, FiltersView, CalendarView } from './Views';
+import CompletedView from './CompletedView';
 import Leaderboard from './Leaderboard';
+import TimeBasedGreeting from './TimeBasedGreeting';
+import WorkspaceView from './WorkspaceView';
+import BentoGrid from './BentoGrid';
+import NotificationPanel from './NotificationPanel';
 import Sidebar from './Sidebar';
 import CommandPalette from './CommandPalette';
 import { ProfileModal } from './Modals';
 import InviteModal from './InviteModal';
 import NotificationBar from './NotificationBar';
-import VoiceInput from './VoiceInput';
+import NotificationPopover from './NotificationPopover';
 import { 
   Menu, Search, Flame, Bell, UserPlus, SlidersHorizontal, 
   Layout, List, Grid, Trophy, Home, Sun, Moon, PanelLeft
@@ -22,7 +27,9 @@ const Dashboard: React.FC = () => {
     setShowCommandPalette,
     showNotifications,
     setShowNotifications,
-    loadWorkspaces
+    loadWorkspaces,
+    switchWorkspace, // Added from diff
+    logout // Added from diff
   } = useStore();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -31,6 +38,26 @@ const Dashboard: React.FC = () => {
   const [showViewMenu, setShowViewMenu] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false); // Added from diff
+  const [showBentoGrid, setShowBentoGrid] = useState(false); // Added from diff
+  const profileMenuRef = useRef<HTMLDivElement>(null); // Added from diff
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
 
   useEffect(() => {
     // Check system preference or local storage
@@ -71,9 +98,12 @@ const Dashboard: React.FC = () => {
       case ViewMode.GRID: return <GridView />;
       case ViewMode.LEADERBOARD: return <Leaderboard />;
       case ViewMode.INBOX: return <InboxView />;
+      case ViewMode.COMPLETED: return <CompletedView />;
       case ViewMode.TODAY: return <TodayView />;
       case ViewMode.FILTERS: return <FiltersView />;
       case ViewMode.CALENDAR: return <CalendarView />;
+      case ViewMode.WORKSPACE: 
+        return selectedWorkspaceId ? <WorkspaceView workspaceId={selectedWorkspaceId} /> : <InboxView />;
       default: return <OverviewView />;
     }
   };
@@ -92,8 +122,12 @@ const Dashboard: React.FC = () => {
       {/* Desktop Sidebar */}
       <div className="hidden md:block h-full border-r border-slate-200 dark:border-white/5">
           <Sidebar 
-            isCollapsed={isSidebarCollapsed} 
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            collapsed={isSidebarCollapsed} 
+            onCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            onWorkspaceClick={(workspaceId) => {
+              setSelectedWorkspaceId(workspaceId);
+              setViewMode(ViewMode.WORKSPACE);
+            }}
           />
       </div>
 
@@ -196,20 +230,28 @@ const Dashboard: React.FC = () => {
 
                 {/* Notifications Bell */}
                 <button 
-                  onClick={() => setViewMode(ViewMode.INBOX)}
-                  className="relative p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className={`relative p-2 transition-colors ${
+                    showNotifications 
+                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg' 
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg'
+                  }`}
                 >
                   <Bell className="w-5 h-5" />
                   {invitations.length > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse ring-2 ring-white dark:ring-[#0f172a]" />
                   )}
                 </button>
             </div>
         </header>
 
-        {/* View Area */}
-        <div className="flex-1 overflow-hidden relative z-0">
-          <div className="h-full overflow-y-auto custom-scrollbar w-full">
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900">
+          <div className="p-4 md:p-6">
+            {/* Time-Based Greeting */}
+            <TimeBasedGreeting userName={user?.name || 'there'} />
+            
+            {/* View Content */}
             <AnimatePresence mode="wait">
                 <motion.div
                     key={viewMode}
@@ -226,6 +268,12 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
 
+      {/* Notification Popover */}
+      <NotificationPopover 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
+
 
 
       {/* Invite Modal */}
@@ -238,11 +286,9 @@ const Dashboard: React.FC = () => {
         />
       )}
 
+
       {/* Profile Modal */}
       <ProfileModal isOpen={showProfile} onClose={() => setShowProfile(false)} />
-
-      {/* Voice Input */}
-      <VoiceInput />
     </div>
   );
 };

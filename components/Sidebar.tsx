@@ -1,27 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ViewMode, WorkspaceType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Bell, PanelLeft, Search, Inbox, Calendar, Hash, 
-  PlusCircle, ChevronDown, Plus, LogOut, Briefcase, User,
+  PlusCircle, ChevronDown, Plus, LogOut, Briefcase,  User,
   Edit, Trash2, UserPlus, Users,
   Calendar1Icon,
   Calendar1,
-  Trophy
+  Trophy,
+  CheckCircle,
+  Mic
 } from 'lucide-react';
 import { CreateWorkspaceModal, ProfileModal, DeleteWorkspaceModal } from './Modals';
 import InviteModal from './InviteModal';
 import MembersModal from './MembersModal';
 
 interface SidebarProps {
+  collapsed?: boolean;
   isMobile?: boolean;
-  onCloseMobile?: () => void;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
+  onCollapse?: () => void;
+  onClose?: () => void;
+  onWorkspaceClick?: (workspaceId: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed = false, onToggleCollapse }) => {
+const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, isMobile = false, onCollapse, onClose, onWorkspaceClick }) => {
   const { 
     user, logout, viewMode, setViewMode, 
     currentWorkspace, workspaces, switchWorkspace, 
@@ -33,8 +36,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
     setShowNotifications,
     invitations,
     tasks,
-    loadWorkspaces // Added
+    loadWorkspaces,
+    createWorkspace,
+    filterTag,
+    setFilterTag,
+    toggleMic,
+    isListening
   } = useStore();
+    
+  // Get all unique tags from ALL tasks (including archived)
+  const allTags = useMemo(() => {
+      return Array.from(new Set(tasks.flatMap(t => t.tags || [])));
+  }, [tasks]);
+  
+  // Count tasks per tag (including archived)
+  const getTagCount = (tag: string) => {
+      return tasks.filter(t => t.tags?.includes(tag)).length;
+  };
   
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false); // Renamed to isCreateModalOpen in proposed, keeping original for now
@@ -58,14 +76,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
     return due.getTime() === today.getTime() && t.status !== 'DONE';
   }).length;
 
-  // Mobile always full width
-  const collapsed = isMobile ? false : isCollapsed;
-
-  const handleSwitch = (id: string) => {
-    switchWorkspace(id);
-    setIsWorkspaceMenuOpen(false);
-    if (isMobile && onCloseMobile) onCloseMobile();
+  const handleSwitch = async (workspaceId: string) => {
+    try {
+      await switchWorkspace(workspaceId);
+    } catch (error) {
+      console.error('Failed to switch workspace');
+    }
   };
+
+  const handleClose = () => {
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };;
 
   const personalWorkspaces = workspaces.filter(w => w.type === WorkspaceType.PERSONAL);
   const teamWorkspaces = workspaces.filter(w => w.type === WorkspaceType.TEAM);
@@ -87,30 +110,50 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
     </button>
   );
 
-  const WorkspaceItem: React.FC<{ ws: any }> = ({ ws }) => (
-    <div className="group flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer transition-colors">
-      <button 
-        className="flex-1 flex items-center gap-2 text-sm truncate"
-        onClick={() => handleSwitch(ws.id)}
-      >
-        <span className={`w-2 h-2 rounded-full ${ws.id === currentWorkspace?.id ? 'bg-indigo-500' : 'bg-slate-400 dark:bg-slate-600'}`} />
+  const WorkspaceItem = ({ ws }: { ws: any }) => (
+    <div
+      className={`group flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer text-sm ${
+        ws.id === currentWorkspace?.id || (viewMode === ViewMode.WORKSPACE && ws.id === currentWorkspace?.id)
+          ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-medium'
+          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+      }`}
+      onClick={() => {
+        handleSwitch(ws.id);
+        handleClose();
+        if (onWorkspaceClick) {
+          onWorkspaceClick(ws.id);
+        }
+      }}
+    >
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs ${ws.color || 'bg-indigo-500'} text-white flex-shrink-0`}>
+            <Briefcase className="w-3 h-3" />
+        </div>
         {editingWorkspace === ws.id ? (
-             <input
-                type="text"
+            <input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={async () => {
                     if (editName.trim() && editName !== ws.name) {
                         try {
-                            await updateWorkspace(ws.id, editName.trim());
+                            await updateWorkspace(ws.id, { name: editName.trim() });
                         } catch (error) {
                             console.error('Failed to update workspace name');
                         }
                     }
                     setEditingWorkspace(null);
                 }}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') e.currentTarget.blur();
+                onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                        if (editName.trim() && editName !== ws.name) {
+                            try {
+                                await updateWorkspace(ws.id, { name: editName.trim() });
+                            } catch (error) {
+                                console.error('Failed to update workspace name');
+                            }
+                        }
+                        setEditingWorkspace(null);
+                    }
                     if (e.key === 'Escape') {
                         setEditingWorkspace(null);
                         setEditName('');
@@ -125,10 +168,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
                 {ws.name}
             </span>
         )}
-      </button>
+      </div>
 
       {/* Actions */}
-      {ws.role === 'OWNER' && ws.type !== WorkspaceType.PERSONAL && (
+      {ws.role === 'OWNER' && (
         <div className="hidden group-hover:flex items-center opacity-60 hover:opacity-100">
             <button
                 onClick={(e) => {
@@ -174,31 +217,48 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-200 max-w-[100px] truncate">{user?.name}</span>
                     <ChevronDown className="w-3 h-3 text-slate-500" />
                 </button>
-                
                 <div className="flex items-center gap-1">
-                    <button className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 rounded-md transition-colors">
-                        <Bell className="w-4 h-4" />
-                    </button>
-                    <button 
-                        onClick={onToggleCollapse}
-                        className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 rounded-md transition-colors"
-                    >
-                        <PanelLeft className="w-4 h-4" />
-                    </button>
-                </div>
+                        <button className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 rounded-md transition-colors">
+                            <Search className="w-4 h-4" />
+                        </button>
+                        {!isMobile && onCollapse && (
+                            <button 
+                                onClick={onCollapse}
+                                className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 rounded-md transition-colors"
+                            >
+                                <PanelLeft className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
             </div>
+            
 
             {/* Add Task Button */}
             <div className="px-3 mb-2">
-                <button 
-                    onClick={() => addTask('New Task')}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-md transition-colors group"
-                >
-                    <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center group-hover:bg-indigo-600 transition-colors shadow-sm">
-                        <Plus className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="text-sm font-medium">Add task</span>
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => addTask('New Task')}
+                        className="flex-1 flex items-center gap-2 px-2 py-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-md transition-colors group"
+                    >
+                        <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center group-hover:bg-indigo-600 transition-colors shadow-sm">
+                            <Plus className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-sm font-medium">Add task</span>
+                    </button>
+                    
+                    {/* Voice Input Button for New Tasks */}
+                    <button 
+                        onClick={() => toggleMic()}
+                        className={`flex items-center justify-center w-9 h-9 rounded-md transition-all ${
+                            isListening 
+                                ? 'bg-red-500 text-white animate-pulse' 
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400'
+                        }`}
+                        title={isListening ? "Listening..." : "Voice input for new task"}
+                    >
+                        <Mic className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Navigation */}
@@ -218,6 +278,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
                         count={inboxCount > 0 ? inboxCount : undefined}
                     />
                     <NavItem 
+                        icon={CheckCircle} 
+                        label="Completed" 
+                        active={viewMode === ViewMode.COMPLETED}
+                        onClick={() => setViewMode(ViewMode.COMPLETED)}
+                        count={tasks.filter(t => t.status === 'DONE' && !t.archived).length}
+                    />
+                    <NavItem 
                         icon={Calendar}
                         label="Today" 
                         active={viewMode === ViewMode.TODAY} 
@@ -232,15 +299,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
                     />
                     <NavItem 
                         icon={Hash} 
-                        label="Filters & Labels" 
+                        label="Filters and Tags" 
                         active={viewMode === ViewMode.FILTERS}
-                        onClick={() => setViewMode(ViewMode.FILTERS)} 
-                    />
-                    <NavItem 
-                        icon={Trophy} 
-                        label="Leaderboard" 
-                        active={viewMode === ViewMode.LEADERBOARD}
-                        onClick={() => setViewMode(ViewMode.LEADERBOARD)} 
+                        onClick={() => setViewMode(ViewMode.FILTERS)}
                     />
                 </div>
 
@@ -290,6 +351,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile, onCloseMobile, isCollapsed 
                         </div>
                     </div>
                     <div className="space-y-0.5">
+                        {/* Leaderboard for Team */}
+                        <NavItem 
+                            icon={Trophy} 
+                            label="Leaderboard" 
+                            active={viewMode === ViewMode.LEADERBOARD}
+                            onClick={() => setViewMode(ViewMode.LEADERBOARD)}
+                        />
+                        {/* Team Workspaces */}
                         {teamWorkspaces.map(ws => (
                             <WorkspaceItem key={ws.id} ws={ws} />
                         ))}

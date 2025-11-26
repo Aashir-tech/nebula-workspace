@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { Task, TaskStatus, User, ViewMode, Workspace, WorkspaceType, Block, Invitation } from '../types';
 import { authAPI, taskAPI, workspaceAPI, invitationAPI } from '../services/api';
+import { useRealTimeTasks } from './WebSocketContext';
 
 interface StoreState {
   user: User | null;
@@ -14,6 +14,8 @@ interface StoreState {
   isInitializing: boolean;
   showCommandPalette: boolean;
   invitations: Invitation[];
+  showNotifications: boolean;
+  filterTag: string | null;
 }
 
 interface StoreActions {
@@ -25,9 +27,21 @@ interface StoreActions {
   createWorkspace: (name: string, type: WorkspaceType) => Promise<void>;
   updateWorkspace: (workspaceId: string, name: string) => Promise<void>;
   deleteWorkspace: (workspaceId: string) => Promise<void>;
-  addTask: (title: string) => Promise<void>;
+  leaveWorkspace: (workspaceId: string) => Promise<void>;
+  addTask: (
+    title: string, 
+    priority?: string | null, 
+    dueDate?: Date | null,
+    labels?: string[],
+    subtasks?: any[],
+    workspaceId?: string,
+    reminder?: Date | null,
+    customReminderDate?: Date | null
+  ) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
+  duplicateTask: (taskId: string) => Promise<void>;
+  archiveTask: (taskId: string) => Promise<void>;
   setViewMode: (mode: ViewMode) => void;
   moveTask: (taskId: string, newStatus: TaskStatus) => Promise<void>;
   setShowCommandPalette: (show: boolean) => void;
@@ -52,13 +66,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.OVERVIEW);
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.INBOX);
   const [isLoading, setIsLoading] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [filterTag, setFilterTag] = useState<string | null>(null);
 
   // Voice Command Logic
   const toggleMic = () => {
@@ -146,7 +161,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const loadWorkspaces = async () => {
     try {
       console.log('StoreContext: Loading workspaces...');
-      const { data } = await workspaceAPI.getWorkspaces();
+      const { data } = await workspaceAPI.getAll();
       console.log('StoreContext: Loaded workspaces:', data);
       setWorkspaces(data);
       if (data.length > 0 && !currentWorkspace) {
@@ -188,6 +203,30 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       loadWorkspaces();
     }
   }, [user]);
+
+  // Real-time WebSocket updates
+  useRealTimeTasks(
+    currentWorkspace?.id || null,
+    // On task created by another user
+    (task: Task) => {
+      console.log('Real-time: Task created', task);
+      setTasks(prev => {
+        // Only add if not already in list
+        if (prev.some(t => t.id === task.id)) return prev;
+        return [task, ...prev];
+      });
+    },
+    // On task updated by another user
+    (task: Task) => {
+      console.log('Real-time: Task updated', task);
+      setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    },
+    // On task deleted by another user
+    (taskId: string) => {
+      console.log('Real-time: Task deleted', taskId);
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+    }
+  );
 
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
@@ -255,7 +294,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const createWorkspace = async (name: string, type: WorkspaceType) => {
     try {
-      const { data } = await workspaceAPI.createWorkspace({ name, type });
+      const { data } = await workspaceAPI.create({ name, type });
       setWorkspaces(prev => [...prev, data]);
       setCurrentWorkspace(data);
     } catch (error: any) {
@@ -266,7 +305,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const updateWorkspace = async (workspaceId: string, name: string) => {
     try {
-      const { data } = await workspaceAPI.updateWorkspace(workspaceId, name);
+      const { data } = await workspaceAPI.update(workspaceId, { name });
       
       // Update in workspaces list
       setWorkspaces(prev => prev.map(w => 
@@ -287,41 +326,126 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     try {
       await workspaceAPI.deleteWorkspace(workspaceId);
       
-      // Remove from workspaces list
+      // Remove from local state
       setWorkspaces(prev => prev.filter(w => w.id !== workspaceId));
       
-      // If deleting current workspace, switch to another one
+      // If we deleted the current workspace, switch to another one
       if (currentWorkspace?.id === workspaceId) {
         const remainingWorkspaces = workspaces.filter(w => w.id !== workspaceId);
-        setCurrentWorkspace(remainingWorkspaces.length > 0 ? remainingWorkspaces[0] : null);
+        if (remainingWorkspaces.length > 0) {
+          switchWorkspace(remainingWorkspaces[0].id);
+        } else {
+          setCurrentWorkspace(null);
+        }
       }
+      
+      // Remove tasks from deleted workspace
+      setTasks(prev => prev.filter(t => t.workspaceId !== workspaceId));
+      
+      console.log('Workspace deleted successfully');
     } catch (error: any) {
       console.error('Failed to delete workspace:', error);
       throw error;
     }
   };
 
-  const addTask = async (title: string) => {
-    if (!currentWorkspace) return;
-    
+  const leaveWorkspace = async (workspaceId: string) => {
     try {
-      const { data } = await taskAPI.createTask({
-        workspaceId: currentWorkspace.id,
-        title,
-        contentBlocks: [{ id: `b-${Date.now()}`, type: 'paragraph' as const, content: '' }],
-        tags: ['New'],
-      });
-      setTasks(prev => [data, ...prev]);
-    } catch (error) {
-      console.error('Failed to create task:', error);
+      if (!user) throw new Error('User not authenticated');
+      
+      await workspaceAPI.leaveWorkspace(workspaceId);
+      
+      // Remove from local state
+      setWorkspaces(prev => prev.filter(w => w.id !== workspaceId));
+      
+      // If we left the current workspace, switch to another one
+      if (currentWorkspace?.id === workspaceId) {
+        const remainingWorkspaces = workspaces.filter(w => w.id !== workspaceId);
+        if (remainingWorkspaces.length > 0) {
+          switchWorkspace(remainingWorkspaces[0].id);
+        } else {
+          setCurrentWorkspace(null);
+        }
+      }
+      
+      // Remove tasks from left workspace
+      setTasks(prev => prev.filter(t => t.workspaceId !== workspaceId));
+      
+      console.log('Left workspace successfully');
+    } catch (error: any) {
+      console.error('Failed to leave workspace:', error);
       throw error;
+    }
+  };
+
+  const addTask = async (
+    title: string, 
+    priority?: string | null, 
+    dueDate?: Date | null,
+    labels?: string[],
+    subtasks?: any[],
+    workspaceId?: string,
+    reminder?: Date | null,
+    customReminderDate?: Date | null
+  ) => {
+    try {
+      // Use provided workspaceId or fall back to currentWorkspace
+      const targetWorkspaceId = workspaceId || currentWorkspace?.id;
+      
+      if (!targetWorkspaceId) {
+        console.error('No workspace selected');
+        return;
+      }
+
+      const newTaskData = {
+        workspaceId: targetWorkspaceId,
+        title: title.trim(),
+        priority: priority || null,
+        dueDate: dueDate || null,
+        labels: labels || [],
+        subtasks: subtasks || [],
+        reminder: reminder || customReminderDate || null,
+        contentBlocks: [
+          {
+            id: `b-${Date.now()}`,
+            type: 'paragraph' as const,
+            content: ''
+          }
+        ],
+        tags: []
+      };
+
+      console.log('Creating task with data:', newTaskData);
+      const { data } = await taskAPI.createTask(newTaskData);
+      console.log('Task created:', data);
+      
+      setTasks(prev => [data, ...prev]);
+    } catch (error: any) {
+      console.error('Failed to add task:', error);
+      console.error('Error details:', error.response?.data);
+    }
+  };
+
+  // Play completion sound
+  const playCompletionSound = () => {
+    try {
+      const audio = new Audio('/sounds/completion.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(err => console.log('Audio play failed:', err));
+    } catch (error) {
+      console.log('Audio not supported');
     }
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     try {
+      console.log('Updating task:', taskId, 'with:', updates);
       const { data } = await taskAPI.updateTask(taskId, updates);
-      setTasks(prev => prev.map(t => t.id === taskId ? data : t));
+      console.log('Task update response:', data);
+      
+      setTasks(prevTasks =>
+        prevTasks.map(t => t.id === taskId ? { ...t, ...data } : t)
+      );
       
       // Refresh user to get updated streak
       if (updates.status === TaskStatus.DONE) {
@@ -344,7 +468,43 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const moveTask = async (taskId: string, newStatus: TaskStatus) => {
+    // Play sound when marking as done
+    if (newStatus === TaskStatus.DONE) {
+      playCompletionSound();
+    }
     await updateTask(taskId, { status: newStatus });
+  };
+
+  const duplicateTask = async (taskId: string) => {
+    if (!currentWorkspace) return;
+    
+    try {
+      const originalTask = tasks.find(t => t.id === taskId);
+      if (!originalTask) return;
+      
+      const { data } = await taskAPI.createTask({
+        workspaceId: currentWorkspace.id,
+        title: `${originalTask.title} (Copy)`,
+        contentBlocks: originalTask.contentBlocks || [{ id: `b-${Date.now()}`, type: 'paragraph' as const, content: '' }],
+        tags: originalTask.tags || [],
+        status: originalTask.status,
+        priority: originalTask.priority,
+      });
+      setTasks(prev => [data, ...prev]);
+    } catch (error) {
+      console.error('Failed to duplicate task:', error);
+      throw error;
+    }
+  };
+
+  const archiveTask = async (taskId: string) => {
+    try {
+      await updateTask(taskId, { status: TaskStatus.DONE });
+      // Optionally: add an 'archived' tag or move to separate archive list
+    } catch (error) {
+      console.error('Failed to archive task:', error);
+      throw error;
+    }
   };
 
   const refreshUser = async () => {
@@ -375,9 +535,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const createInvitation = async (workspaceId: string, email: string, role: 'MEMBER' | 'ADMIN' = 'MEMBER') => {
     try {
-      console.log('CreateInvitation called with:', { workspaceId, email, role });
-      console.log('Current workspace:', currentWorkspace);
-      await invitationAPI.createInvitation({ workspaceId, inviteeEmail: email, role });
+      console.log('Creating invitation:', { workspaceId, email, role });
+      await invitationAPI.create({ workspaceId, inviteeEmail: email, role });
     } catch (error: any) {
       console.error('Failed to create invitation:', error);
       throw error;
@@ -386,7 +545,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const acceptInvitation = async (id: string) => {
     try {
-      const { data } = await invitationAPI.acceptInvitation(id);
+      const response = await invitationAPI.accept(id);
       // Reload workspaces and invitations
       await loadWorkspaces();
       await loadInvitations();
@@ -398,7 +557,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const rejectInvitation = async (id: string) => {
     try {
-      await invitationAPI.rejectInvitation(id);
+      await invitationAPI.reject(id);
       await loadInvitations();
     } catch (error: any) {
       console.error('Failed to reject invitation:', error);
@@ -447,7 +606,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     invitations,
     showNotifications,
     setShowNotifications,
-    setShowCommandPalette,
+    filterTag,
+    setFilterTag,
     login,
     register,
     logout,
@@ -456,11 +616,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     addTask,
     updateTask,
     deleteTask,
+    duplicateTask,
+    archiveTask,
+    moveTask,
     createWorkspace,
     updateWorkspace,
     deleteWorkspace,
+    leaveWorkspace,
     setViewMode,
-    moveTask,
     incrementStreak,
     refreshUser,
     isListening,

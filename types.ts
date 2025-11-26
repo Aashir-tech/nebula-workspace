@@ -6,16 +6,19 @@ export enum TaskStatus {
 }
 
 export enum ViewMode {
-  HOME = "HOME",
-  OVERVIEW = 'OVERVIEW',
-  LIST = 'LIST',
-  BOARD = 'BOARD',
-  GRID = 'GRID',
-  LEADERBOARD = 'LEADERBOARD',
   INBOX = 'INBOX',
   TODAY = 'TODAY',
+  UPCOMING = 'UPCOMING',
   FILTERS = 'FILTERS',
-  CALENDAR = 'CALENDAR'
+  CALENDAR = 'CALENDAR',
+  COMPLETED = 'COMPLETED',
+  WORKSPACE = 'WORKSPACE',
+  LEADERBOARD = 'LEADERBOARD',
+  OVERVIEW = 'OVERVIEW',
+  BOARD = 'BOARD',
+  LIST = 'LIST',
+  GRID = 'GRID',
+  HOME = 'HOME'
 }
 
 export enum WorkspaceType {
@@ -74,6 +77,12 @@ export interface Block {
   checked?: boolean; // For todo blocks
 }
 
+export interface SubTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   workspaceId: string; // Added for dual-engine auth
@@ -83,10 +92,22 @@ export interface Task {
   contentBlocks: Block[]; // New Notion-style content
   status: TaskStatus;
   tags: string[];
+  labels?: string[]; // NEW: Labels/tags for categorization
+  subtasks?: Array<{
+    id: string;
+    title: string;
+    completed: boolean;
+  }>; // NEW: Sub-tasks
   assigneeId?: string;
+  assignedTo?: string | null; // User ID of assigned team member
   aiEnhanced?: boolean;
   dueDate?: string;
-  createdAt: number;
+  priority?: 'P1' | 'P2' | 'P3' | 'P4' | null;
+  archived?: boolean; // NEW: Archive status
+  sectionId?: string; // NEW: Section assignment
+  reminder?: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface LeaderboardEntry {
@@ -103,4 +124,12 @@ export interface AIInsight {
   title: string;
   content: string;
   score?: number;
+}
+
+export interface Section {
+  id: string;
+  workspaceId: string;
+  title: string;
+  order: number;
+  createdAt: number;
 }

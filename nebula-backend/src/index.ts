@@ -16,6 +16,8 @@ import aiRoutes from './routes/ai.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import googleAuthRoutes from './routes/googleAuth.js';
 import invitationRoutes from './routes/invitations.js';
+import reminderRoutes from './routes/reminders.js';
+import commentRoutes from './routes/comments.js';
 
 dotenv.config();
 
@@ -88,6 +90,8 @@ app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/invitations', invitationRoutes);
+app.use('/api/reminders', reminderRoutes);
+app.use('/api/comments', commentRoutes);
 
 // ============================================
 // Error Handling

@@ -63,7 +63,43 @@ const TaskSchema = new Schema<ITask>(
     dueDate: {
       type: Date,
       default: null
-    }
+    },
+    priority: {
+      type: String,
+      enum: ['P1', 'P2', 'P3', 'P4', null],
+      default: null
+    },
+    labels: {
+      type: [String],
+      default: []
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    assignedId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    subtasks: {
+      type: [{
+        id: String,
+        title: String,
+        completed: { type: Boolean, default: false }
+      }],
+      default: []
+    },
+    reminder: {
+      type: Date,
+      default: null
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
   },
   { timestamps: true }
 );

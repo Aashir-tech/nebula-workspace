@@ -1,306 +1,230 @@
-# Nebula Workspace
+# Nebula - AI-Powered Task Management System
 
-A next-generation, AI-powered collaborative workspace with fluid UI, real-time collaboration, and intelligent task management.
+> **A modern, intelligent task management application with real-time collaboration, AI assistance, and smart notifications.**
 
-## ✨ Features
-
-### 🌌 The "Nebula" Experience
-- **Cosmic Aesthetic**: Deep space palette with immersive particle background systems
-- **Premium Glassmorphism**: Frosted glass cards with glowing borders and subtle highlights
-- **Fluid Animations**: Smooth transitions between states and interactive elements
-
-### 🎯 Core Features
-- **Multi-View Task Management**: Kanban Board, List View, Grid Gallery, and Bento Dashboard
-- **Rich Content Blocks**: Text, code snippets, images, and more with optimized performance
-- **Real-time Collaboration**: WebSocket-powered live updates
-- **AI Enhancement**: Gemini-powered text improvement and task insights
-- **Voice Command Orb**: Interactive floating orb for voice-to-task creation with visual feedback
-
-### 👥 Workspace & Team
-- **Member Management**: View and manage workspace members directly from the sidebar
-- **Smart Invitations**: Invite teammates via email with role assignment
-- **Real-time Notifications**: Instant alerts for invites and updates
-
-### 🏆 Gamification
-- **Daily Streaks**: Track consecutive days of task completion
-- **Team Leaderboard**: Compete with teammates (podium-style visualization)
-- **Achievement System**: Earn badges and points
-
-### 🔐 Authentication
-- **Nebula Auth**: Custom-designed login/signup with password toggle and smooth mode switching
-- **Google OAuth**: One-click login with Google account
-- **Secure Sessions**: Token-based authentication with automatic refresh
-
-### 🎨 UI/UX
-- **Responsive Design**: Mobile-first approach for all screen sizes
-- **Dark Mode Default**: Optimized for eye comfort and battery life
-- **Custom Typography**: Clean, modern fonts for maximum readability
-- **Micro-interactions**: Hover effects, focus rings, and tactile feedback
+Nebula is a full-stack task management system built with React, TypeScript, and Node.js, featuring AI-powered text enhancement, real-time WebSocket collaboration, workspace management, and comprehensive reminder notifications.
 
 ---
 
-## 🛠️ Tech Stack
+## 🌟 Features
 
-### Frontend
-- **React 18** + TypeScript
-- **Vite** - Lightning-fast build tool
-- **Motion/Framer Motion** - Smooth animations
-- **Lucide React** - Beautiful icons
-- **Tailwind CSS** - Utility-first styling
+### ✅ Core Task Management
+- **Smart Task Creation** with voice input support
+- **Multiple View Modes**: List, Kanban Board, Calendar
+- **Drag-and-Drop** task organization
+- **Rich Task Editor** with block-based content
+- **Priority Levels** (P1-P4) with color coding
+- **Custom Labels** for categorization
+- **Subtasks** with progress tracking
 
-### Backend
-- **Node.js** + Express
-- **MongoDB** + Mongoose
-- **Socket.io** - Real-time updates
-- **Google Gemini AI** - AI-powered features
-- **JWT** - Secure authentication
+### 🔔 Smart Reminders & Notifications
+- **Real-Time Countdown Timer** - Global notifications show when reminders approach (within 5 minutes)
+- **Browser Notifications** - System notifications for important reminders
+- **Flexible Reminder Options**:
+  - Quick select: 15min, 30min, 1 hour, 2 hours
+  - Custom date + time picker with modern UI
+- **Visual Indicators** - Bell icons in task cards with relative time display ("in 2h", "tomorrow")
+
+### 👥 Workspace Collaboration
+- **Personal & Team Workspaces**
+- **Invitation System** - Email-based member invitations with accept/reject flow
+- **Notification Panel** - Real-time workspace invite notifications
+- **Member Management** - View, invite, and manage team members
+- **Leave Workspace** - Members can voluntarily leave teams (with confirmation modal)
+- **Task Assignment** - Assign tasks to team members
+
+### 🤖 AI Integration
+- **Text Enhancement** - AI-powered text refinement and improvement
+- **Voice Input** - Speech-to-text for hands-free task creation
+
+### 📊 Advanced Features
+- **Real-Time Sync** - WebSocket integration for live updates
+- **Task Comments** - Threaded discussions on tasks
+- **Dark Mode** - Beautiful dark theme support
+- **Responsive Design** - Works seamlessly on desktop and mobile
+- **Task Duplication** - Quick task cloning
+- **Archive** - Archive completed tasks
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ and npm
-- MongoDB (local or Atlas)
-- Google Cloud Console account (for OAuth and AI)
+- Node.js (v16+)
+- MongoDB
+- npm or yarn
 
-### 1. Clone & Install
+### Installation
 
+**1. Clone the repository**
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd antigravity-workspace
+git clone <repository-url>
+cd nebula
+```
 
-# Install frontend dependencies
+**2. Install Dependencies**
+```bash
+# Frontend
 npm install
 
-# Install backend dependencies
+# Backend
 cd nebula-backend
 npm install
 ```
 
-### 2. Backend Setup
+**3. Environment Setup**
 
-#### Create `.env` file in `nebula-backend/`
-
+Create `.env` file in `nebula-backend/`:
 ```env
-# Server
-PORT=5000
-NODE_ENV=development
-
-# Database
 MONGODB_URI=mongodb://localhost:27017/nebula
-# OR use MongoDB Atlas:
-# MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/nebula
-
-# JWT Secret (use a strong random string)
-JWT_SECRET=your-super-secret-jwt-key-change-this
-
-# Google AI (Get from https://ai.google.dev/)
-GOOGLE_API_KEY=your-google-gemini-api-key
-
-# Google OAuth (Get from https://console.cloud.google.com/)
-GOOGLE_CLIENT_ID=your-google-oauth-client-id
-GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
-GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
-
-# Frontend URL
-FRONTEND_URL=http://localhost:5173
+JWT_SECRET=your_jwt_secret_here
+PORT=5001
+GEMINI_API_KEY=your_gemini_api_key  # For AI features
 ```
 
-#### Get Google Credentials
-
-**Google OAuth:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google+ API
-4. Go to Credentials → Create OAuth 2.0 Client ID
-5. Add authorized redirect URI: `http://localhost:5000/api/auth/google/callback`
-6. Copy Client ID and Client Secret
-
-**Google Gemini API:**
-1. Visit [Google AI Studio](https://ai.google.dev/)
-2. Get API key
-3. Add to `.env` as `GOOGLE_API_KEY`
-
-#### Start Backend
+**4. Start the Application**
 
 ```bash
+# Terminal 1 - Backend
 cd nebula-backend
 npm run dev
-```
 
-Backend runs on `http://localhost:5000`
-
-### 3. Frontend Setup
-
-#### Start Frontend
-
-```bash
-# From project root
+# Terminal 2 - Frontend
 npm run dev
 ```
 
-Frontend runs on `http://localhost:5173`
-
-### 4. Access the App
-
-Open `http://localhost:5173` in your browser and create an account!
+Access the app at `http://localhost:5173`
 
 ---
 
-## 📦 Deployment
+## 🏗️ Architecture
 
-### Deploy Backend (Railway/Render)
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for blazing-fast development
+- **TailwindCSS** for styling
+- **Framer Motion** for animations
+- **Lucide React** for icons
+- **@dnd-kit** for drag-and-drop
+- **WebSocket** for real-time updates
 
-#### Railway (Recommended)
-1. Install Railway CLI: `npm i -g @railway/cli`
-2. Login: `railway login`
-3. Create project: `railway init`
-4. Add MongoDB: `railway add mongodb`
-5. Set environment variables in Railway dashboard
-6. Deploy:
-   ```bash
-   cd nebula-backend
-   railway up
-   ```
+### Backend
+- **Node.js** with Express
+- **MongoDB** with Mongoose
+- **JWT** authentication
+- **Socket.io** for WebSockets
+- **Google Gemini AI** integration
 
-#### Render
-1. Create account at [render.com](https://render.com)
-2. Click "New Web Service"
-3. Connect your GitHub repo
-4. Set:
-   - **Build Command**: `cd nebula-backend && npm install && npm run build`
-   - **Start Command**: `cd nebula-backend && npm start`
-   - **Root Directory**: `/`
-5. Add environment variables
-6. Deploy
-
-### Deploy Frontend (Vercel)
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. From project root:
-   ```bash
-   vercel
-   ```
-3. Follow prompts
-4. Add environment variable in Vercel dashboard:
-   - `VITE_API_URL=<your-backend-url>`
-
-#### Alternative: Netlify
-1. Create `netlify.toml` in root:
-   ```toml
-   [build]
-     command = "npm run build"
-     publish = "dist"
-   
-   [[redirects]]
-     from = "/*"
-     to = "/index.html"
-     status = 200
-   ```
-2. Deploy:
-   ```bash
-   npm install -g netlify-cli
-   netlify deploy --prod
-   ```
-
-### Environment Variables for Production
-
-**Backend (.env):**
-```env
-NODE_ENV=production
-MONGODB_URI=<your-mongodb-atlas-uri>
-JWT_SECRET=<strong-secret-key>
-GOOGLE_API_KEY=<your-api-key>
-GOOGLE_CLIENT_ID=<your-client-id>
-GOOGLE_CLIENT_SECRET=<your-client-secret>
-GOOGLE_CALLBACK_URL=https://your-backend.com/api/auth/google/callback
-FRONTEND_URL=https://your-frontend.com
+### Key Components
 ```
-
-**Frontend:**
-- Update `GOOGLE_CALLBACK_URL` in Google Cloud Console
-- Update `Auth.tsx` line 36-38 to use production backend URL
+├── components/
+│   ├── Dashboard.tsx           # Main app layout
+│   ├── TaskCard.tsx            # Task display with reminder indicator
+│   ├── InlineTaskInput.tsx     # Quick task creation
+│   ├── ReminderNotifications.tsx # Global reminder system
+│   ├── ReminderPicker.tsx       # Modern date/time picker
+│   ├── NotificationPanel.tsx    # Workspace invitations
+│   ├── InviteModal.tsx         # Member invitation
+│   └── LeaveWorkspaceModal.tsx  # Workspace exit confirmation
+├── context/
+│   ├── StoreContext.tsx        # Global state management
+│   └── WebSocketContext.tsx    # Real-time connection
+└── services/
+    └── api.ts                  # API client
+```
 
 ---
 
-## 🐛 Troubleshooting
+## 📱 Usage
 
-### Backend won't start
-- **Error: OAuth2Strategy requires a clientID**
-  - Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env`
-  - Or comment out Google OAuth routes if not using
+### Creating Tasks
+1. Click "+ Add Task" or press keyboard shortcut
+2. Enter task title
+3. Add optional details:
+   - Due date
+   - Priority level
+   - Labels
+   - Subtasks
+   - Reminders
+4. Click "Add Task" or press Enter
 
-### MongoDB connection failed
-- Ensure MongoDB is running locally: `mongod`
-- Or use MongoDB Atlas and update connection string
+### Setting Reminders
+1. Click the reminder icon while creating/editing a task
+2. Choose quick option (15min, 30min, 1h, 2h) OR
+3. Select "Custom" for specific date and time
+4. Receive countdown notifications when reminder approaches
+5. Get browser notifications at reminder time
 
-### Google AI quota exceeded
-- Error 429 means free tier limit reached
-- Wait for quota reset or upgrade plan at [ai.google.dev/usage](https://ai.google.dev/usage)
-
-### Streak not incrementing
-- Check backend logs for "Updating streak for user"
-- Ensure tasks are being marked as DONE
-- Verify server timezone is correct
-
-### OAuth redirect not working
-- Verify callback URL matches Google Console
-- Check CORS settings in backend
-- Ensure `FRONTEND_URL` is correct in `.env`
+### Managing Workspaces
+1. **Create**: Click "+ New Workspace" (Personal or Team)
+2. **Invite Members**: Click team icon → Enter email → Send
+3. **Accept Invitations**: Check notification bell → Accept/Reject
+4. **Leave**: Click "Leave" button (non-owners only)
 
 ---
 
-## 📁 Project Structure
+## 🔮 Future Improvements
 
-```
-antigravity-workspace/
-├── components/          # React components
-│   ├── Auth.tsx        # Authentication page
-│   ├── Dashboard.tsx   # Main dashboard
-│   ├── Leaderboard.tsx # Team leaderboard
-│   ├── TaskCard.tsx    # Task component
-│   └── ...
-├── context/            # React Context
-│   └── StoreContext.tsx
-├── services/           # API clients
-│   ├── api.ts
-│   └── geminiService.ts
-├── nebula-backend/     # Backend server
-│   ├── src/
-│   │   ├── controllers/  # Route handlers
-│   │   ├── models/       # MongoDB schemas
-│   │   ├── routes/       # API routes
-│   │   └── middleware/   # Auth, error handling
-│   └── package.json
-└── package.json        # Frontend dependencies
-```
+### High Priority
+- [ ] **Recurring Tasks** - Support for daily/weekly/monthly task repetition
+- [ ] **Calendar Integration** - Sync with Google Calendar, Outlook
+- [ ] **File Attachments** - Upload and attach files to tasks
+- [ ] **Advanced Filters** - Filter by multiple criteria (priority + label + assignee)
+- [ ] **Task Dependencies** - Block tasks until prerequisites complete
+
+### AI & Automation
+- [ ] **Smart Task Suggestions** - AI recommends tasks based on patterns
+- [ ] **Auto-Prioritization** - AI suggests priority based on deadlines and content
+- [ ] **Natural Language Input** - "Remind me tomorrow at 3pm to call John"
+- [ ] **Smart Scheduling** - AI finds optimal times for tasks
+
+### Collaboration
+- [ ] **Real-Time Editing** - Collaborative task editing like Google Docs
+- [ ] **Activity Feed** - Timeline of all workspace changes
+- [ ] **@Mentions** - Tag team members in comments
+- [ ] **Role-Based Permissions** - Admin, Member, Viewer roles
+- [ ] **Workspace Templates** - Pre-built structures for common workflows
+
+### Integrations
+- [ ] **Slack Integration** - Task notifications in Slack
+- [ ] **GitHub Integration** - Link tasks to issues/PRs
+- [ ] **Time Tracking** - Pomodoro timer and time logs
+- [ ] **APIs** - REST API for third-party integrations
+
+### UX Enhancements
+- [ ] **Keyboard Shortcuts** - Complete shortcut system
+- [ ] **Offline Mode** - Work without internet, sync when online
+- [ ] **Mobile App** - Native iOS and Android apps
+- [ ] **Email Reminders** - Send reminders via email
+- [ ] **Custom Themes** - User-customizable color schemes
+- [ ] **Task Templates** - Reusable task structures
+
+### Analytics & Insights
+- [ ] **Productivity Dashboard** - Charts and metrics
+- [ ] **Time Reports** - How long tasks take to complete
+- [ ] **Team Analytics** - Member productivity and workload
+- [ ] **Burndown Charts** - Track project progress
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## 📄 License
+## 📝 License
 
-MIT License - see LICENSE file for details
-
----
-
-## 🙏 Acknowledgments
-
-- Google Gemini AI for intelligent features
-- MongoDB for data persistence
-- Vercel & Railway for easy deployments
+This project is licensed under the MIT License.
 
 ---
 
-**Built with ❤️ using React, Node.js, and AI**
+## 🎯 Project Status
+
+**Current Version:** 1.0.0  
+**Status:** Active Development  
+**Last Updated:** November 2025
+
+---
+
+**Built with ❤️ using React, TypeScript, and Node.js**

@@ -1,0 +1,4 @@
+# Placeholder for completion sound
+# In production, replace with actual audio file
+# Suggested formats: MP3, WAV, or OGG
+# Sound should be short (< 1 second) and pleasant

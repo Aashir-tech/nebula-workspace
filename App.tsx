@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 import { StoreProvider, useStore } from './context/StoreContext';
+import { WebSocketProvider } from './context/WebSocketContext';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import Loader from './components/Loader';
+import ReminderNotifications from './components/ReminderNotifications';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, setToken, isInitializing } = useStore();
@@ -28,13 +30,20 @@ const AppContent: React.FC = () => {
     return <Loader />;
   }
   
-  return isAuthenticated ? <Dashboard /> : <Auth />;
+  return (
+    <>
+      {isAuthenticated ? <Dashboard /> : <Auth />}
+      {isAuthenticated && <ReminderNotifications />}
+    </>
+  );
 };
 
 const App: React.FC = () => {
   return (
     <StoreProvider>
-      <AppContent />
+      <WebSocketProvider>
+        <AppContent />
+      </WebSocketProvider>
     </StoreProvider>
   );
 };
